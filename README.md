@@ -4,7 +4,7 @@
 
 [//]: # ([![N|Solid](https://cldup.com/dTxpPi9lDf.thumb.png)](https://nodesource.com/products/nsolid) )
 
-This repository contains an efficient sampling-based planning framework, called BI<sup>2</sup>RRT\*, that extends the [Informed RRT\*] of Gammell et al. towards bidirectional search, informed sampling for omnidirectional mobile manipulator robotic platforms and satisfaction of arbitrary geometric endeffector task constraints. The associated paper of the framework presented at the IEEE/RSJ International Conference on Intelligent Robots and Systems can be found in [Burget et al.]. 
+This repository contains an efficient sampling-based planning framework, called BI<sup>2</sup>RRT\*, that extends the Informed RRT\* of [Gammell et al.] towards bidirectional search, informed sampling for omnidirectional mobile manipulator robotic platforms and satisfaction of arbitrary geometric endeffector task constraints. The associated paper of the framework presented at the IEEE/RSJ International Conference on Intelligent Robots and Systems can be found in [Burget et al.]. 
 
 ### Features
   - Planning can be performed for the mobile mase / manipulator only or for the entire mobile manipulator
@@ -240,7 +240,7 @@ with:
 [//]: # (These are reference links used in the body of this note and get stripped out when the markdown processor does its job. There is no need to format nicely because it shouldn't be seen. Thanks SO - http://stackoverflow.com/questions/4823468/store-comments-in-markdown-syntax)
 
 
-   [Informed RRT*]: <https://arxiv.org/pdf/1404.2334v3.pdf>
+   [Gammell et al.]: <https://arxiv.org/pdf/1404.2334v3.pdf>
    [Burget et al.]: http://www2.informatik.uni-freiburg.de/~burgetf/pub/burget16iros.pdf
    [MoveIt Setup Assistant]: http://docs.ros.org/hydro/api/moveit_setup_assistant/html/doc/tutorial.html
    [robot_motion_execution]: https://github.com/burgetf/robot_motion_execution
