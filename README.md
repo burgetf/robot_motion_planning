@@ -4,7 +4,7 @@
 
 [//]: # ([![N|Solid](https://cldup.com/dTxpPi9lDf.thumb.png)](https://nodesource.com/products/nsolid) )
 
-This repository contains an efficient sampling-based planning framework, called BI^(2)RRT*, that extends the [Informed RRT*] of Gammell et al. towards bidirectional search, informed sampling for omnidirectional mobile manipulator robotic platforms and satisfaction of arbitrary geometric endeffector task constraints. The associated paper of the framework presented at the IEEE/RSJ International Conference on Intelligent Robots and Systems can be found in [Burget et al.]. 
+This repository contains an efficient sampling-based planning framework, called BI^(2)RRT*, that extends the [Informed RRT *] of Gammell et al. towards bidirectional search, informed sampling for omnidirectional mobile manipulator robotic platforms and satisfaction of arbitrary geometric endeffector task constraints. The associated paper of the framework presented at the IEEE/RSJ International Conference on Intelligent Robots and Systems can be found in [Burget et al.]. 
 
 ### Features
   - Planning can be performed for the mobile mase / manipulator only or for the entire mobile manipulator
