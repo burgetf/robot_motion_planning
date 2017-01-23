@@ -222,17 +222,13 @@ with:
   
 | Option | Description |
 | ------ | ----------- |
-| PLANNER_NAME   | path to data files to supply the data that will be passed into templates. |
-| PLANNING_GROUP | engine to be used for processing templates. Handlebars is the default. |
-| NUM_PLANNING_RUNS    | extension to be used for dest files. |
+| PLANNER_NAME   | bi_informed_rrt_star,bi_rrt_star,bi_informed_rrt,bi_rrt_connect etc. |
+| PLANNING_GROUP | A planning group from your srdf |
+| NUM_PLANNING_RUNS    | Number of desired planning runs |
+| FLAG_ITERATIONS_OR_TIME    | Run planning for a specific number of iterations (set 0) or seconds (set 1) |
+| MAX_ITERATIONS_TIME    | Maximum iterations/time available for planning |
+| RVIZ_SHOW_TREE    | Publish tree nodes and edges and current solution path in Rviz (set 1) or 0 otherwise. |
 
-
-   - PLANNER_NAME: bi_informed_rrt_star,bi_rrt_star,bi_informed_rrt,bi_rrt_connect etc.
-   - PLANNING_GROUP: A planning group from your srdf
-   - NUM_PLANNING_RUNS: Number of desired planning runs 
-   - FLAG_ITERATIONS_OR_TIME: Run planning for a specific number of iterations (set 0) or seconds (set 1)
-   - MAX_ITERATIONS_TIME: Maximum iterations/time available for planning
-   - RVIZ_SHOW_TREE: Publish tree nodes and edges and current solution path in Rviz (set 1) or 0 otherwise.
 
 ### Todos
 
@@ -247,7 +243,7 @@ with:
    [Informed RRT*]: <https://arxiv.org/pdf/1404.2334v3.pdf>
    [Burget et al.]: http://www2.informatik.uni-freiburg.de/~burgetf/pub/burget16iros.pdf
    [MoveIt Setup Assistant]: http://docs.ros.org/hydro/api/moveit_setup_assistant/html/doc/tutorial.html
-   [robot_motion_execution]: http://docs.ros.org/hydro/api/moveit_setup_assistant/html/doc/tutorial.html
+   [robot_motion_execution]: https://github.com/burgetf/robot_motion_execution
    
 
 
