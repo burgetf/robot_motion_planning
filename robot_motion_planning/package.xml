@@ -1,0 +1,28 @@
+<package>
+  <name>robot_motion_planning</name>
+  <version>0.0.1</version>
+  <description>The robot_motion_planning metapackage</description>
+
+ 
+  <maintainer email="burgetf@informatik.uni-freiburg.de">burgetf</maintainer>
+
+  <license>BSD</license>
+
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <export>
+    <metapackage/> 
+  </export>
+  
+  
+  <run_depend>rrt_star_algorithm</run_depend>
+  <run_depend>birrt_star_algorithm</run_depend>
+  <run_depend>planning_world_builder</run_depend>
+  <run_depend>kuka_lbr_moveit_config</run_depend>
+  <run_depend>vrep</run_depend>
+  <run_depend>planner_statistics</run_depend>
+  <run_depend>planning_scenarios</run_depend>
+  
+  
+</package>

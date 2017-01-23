@@ -1,0 +1,16 @@
+<package>
+  <name>vrep_joy</name>
+  <description>vrep_joy</description>
+  <maintainer email="marc@coppeliarobotics.com">Marc</maintainer>
+  <version>3.1.2</version>
+  <author>formica</author>
+  <license>BSD</license>
+  <url>http://ros.org/wiki/vrep_joy</url>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>joy</build_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>joy</run_depend>
+</package>
+
+

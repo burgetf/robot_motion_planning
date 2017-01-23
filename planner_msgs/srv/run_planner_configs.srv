@@ -1,0 +1,37 @@
+
+#Start and Goal Config
+float64[] start_config
+float64[] goal_config
+
+#Type of planner (uni or bidirectional)
+string planner_type
+
+#ID of the planner run
+uint8 run_id
+
+#Flag indicating whether maximum number of iterations of runtime is used
+uint8 flag_iter_or_time
+
+#Max. number of iterations / or max. runtime 
+float64 iter_or_time
+
+#Flag indicating whether tree optimization is used
+bool tree_optimization
+
+#Flag indicating whether informed sampling is used
+bool informed_sampling
+
+#Flag to visualize planning process
+bool show_tree
+
+---
+
+#Planned joint trajectory
+array2d_double joint_trajectory
+
+#Planned endeffector trajectory
+array2d_double ee_trajectory
+
+#Planning result
+bool success
+

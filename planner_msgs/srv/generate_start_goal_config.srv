@@ -1,0 +1,23 @@
+
+#Start EE pose
+float64[] start_ee_pose
+int32[] constraint_vec_start_pose
+
+#Goal EE pose
+float64[] goal_ee_pose
+int32[] constraint_vec_goal_pose
+
+#Permitted displacement of EE w.r.t target frame
+array2d_double target_coordinate_dev
+
+#Flag to show config generation in rviz
+bool show_motion
+
+---
+
+#Start and Goal Config
+float64[] start_conf
+float64[] goal_conf
+
+#Result of Start and Goal Config Generation
+bool success

@@ -1,0 +1,6 @@
+#Edge costs for c-space coordinates
+float64[] edge_costs
+
+---
+
+bool ok

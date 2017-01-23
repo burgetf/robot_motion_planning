@@ -1,0 +1,3 @@
+planner_name iteration planning_time_elapsed cost_solution_total cost_solution_revolute cost_solution_prismatic theoretical_cost_total theoretical_cost_revolute theoretical_cost_prismatic
+bi_informed_rrt_star 1 0.114494 20.3034 3.2018 18.7471 4.7051 1.37438 4.4999
+bi_informed_rrt_star 2 0.479579 5.53796 1.37438 4.67878 4.7051 1.37438 4.4999

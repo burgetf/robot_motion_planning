@@ -1,0 +1,15 @@
+<launch>
+ 
+  <!-- load robot and setup -->
+  <include file="$(find omnirob_description)/launch/omnirob_lbr_sdh2_extended.launch"> </include> 
+  
+  <!-- Start Planning Server Node -->
+  <node name="planning_server" pkg="planning_server" type="planning_service_node" cwd="node" output="log"> <!--or output="screen" to print std/cout in terminal-->
+	<!-- <rosparam command="load" file="$(find rrt_connect_planner)/planning_config/planning_parameters.yaml"/> --> 
+    <param name="planning_group" value="omnirob_lbr_sdh" />
+	<!-- <param name="file_path_first_goal_config" value="$(find rrt_connect_planner)/config_database/ssc_double_support_goal_first.dat" /> --> 
+  </node> 
+  
+ 
+ 
+</launch>
