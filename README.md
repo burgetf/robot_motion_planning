@@ -219,6 +219,14 @@ In the terminal:
 rosrun planning_scenarios run_block_planning PLANNER_NAME PLANNING_GROUP NUM_PLANNING_RUNS FLAG_ITERATIONS_OR_TIME MAX_ITERATIONS_TIME RVIZ_SHOW_TREE
 ```
 with:
+  
+| Option | Description |
+| ------ | ----------- |
+| PLANNER_NAME   | path to data files to supply the data that will be passed into templates. |
+| PLANNING_GROUP | engine to be used for processing templates. Handlebars is the default. |
+| NUM_PLANNING_RUNS    | extension to be used for dest files. |
+
+
    - PLANNER_NAME: bi_informed_rrt_star,bi_rrt_star,bi_informed_rrt,bi_rrt_connect etc.
    - PLANNING_GROUP: A planning group from your srdf
    - NUM_PLANNING_RUNS: Number of desired planning runs 
