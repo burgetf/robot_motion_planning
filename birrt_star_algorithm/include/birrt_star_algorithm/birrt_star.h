@@ -15,7 +15,7 @@
 #include <planning_world_builder/planning_world_builder.h>
 
 //Needed for planning with the real robot
-#include <robot_interface_definition/robot_interface.h>
+//#include <robot_interface_definition/robot_interface.h>
 
 //#include <rrt_star_algorithm/ProlateHyperspheroid.h>
 #include <omp.h>
@@ -31,23 +31,23 @@ using namespace std;
 namespace birrt_star_motion_planning{
 
 
-class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
+class BiRRTstarPlanner //: public robot_interface_definition::RobotInterface
 {
 	public:
     BiRRTstarPlanner(string planning_group);
     ~BiRRTstarPlanner();
 
     //Set the planning scene
-    void setPlanningSceneInfo(double size_x, double size_y, string scene_name);
+    void setPlanningSceneInfo(vector<double> size_x, vector<double> size_y, string scene_name, bool show_env_borders = true);
     void setPlanningSceneInfo(planning_world::PlanningWorldBuilder world_builder);
 
     //Implementation of the virtual function "move" defined in Abstract Class robot_interface_definition
-    bool plan(const Eigen::Affine3d& goal);
+    //bool plan(const Eigen::Affine3d& goal);
 
     //Move function for base, base+endeffector and endeffector only
-    bool move_base(const Eigen::Affine3d& goal);
-    bool move_base_endeffector(const Eigen::Affine3d& goal);
-    bool move_endeffector(const Eigen::Affine3d& goal);
+    //bool move_base(const Eigen::Affine3d& goal);
+    //bool move_base_endeffector(const Eigen::Affine3d& goal);
+    //bool move_endeffector(const Eigen::Affine3d& goal);
 
     //Initialize RRT* Planner (reading start and goal config from file)
     bool init_planner(char *start_goal_config_file, int search_space);
@@ -61,11 +61,18 @@ class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
     //Initialize RRT* Planner (given start and final endeffector pose)
     bool init_planner(vector<double> ee_start_pose, vector<int> constraint_vec_start_pose, vector<double> ee_goal_pose, vector<int> constraint_vec_goal_pose, vector<pair<double,double> > coordinate_dev, int search_space);
 
+    //Initialize RRT* Planner for plannig with the real robot
+    bool init_planner_map_goal_pose(const Eigen::Affine3d& goal, const vector<int> constraint_vec_goal_pose, const vector<pair<double,double> > target_coordinate_dev, const string planner_type);
+    bool init_planner_map_goal_config(const vector<double> goal, const string planner_type);
+
+
     //Read / Write Start and Goal Config
     void writeStartGoalConfig(char *start_goal_config_file, vector<double> start_config, vector<double> goal_config);
     bool readStartGoalConfig(char *start_goal_config_file, vector<double> &start_config, vector<double> &goal_config);
 
-    //Generate start and goal configuration for a given start and goal EE pose
+    //Generate configurations from ee poses
+    vector<double> generate_config_from_ee_pose(vector<double> ee_pose, vector<int> constraint_vec_ee_pose, vector<pair<double,double> > coordinate_dev, bool show_motion);
+    vector<double> generate_config_from_ee_pose_with_reference_config(vector<double> ee_pose, vector<int> constraint_vec_ee_pose, vector<pair<double,double> > coordinate_dev, vector<double> mean_init_config, bool show_motion);
     vector<vector<double> > generate_start_goal_config(vector<double> start_pose, vector<int> constraint_vec_start_pose, vector<double> goal_pose, vector<int> constraint_vec_goal_pose, vector<pair<double,double> > coordinate_dev, bool show_motion );
 
     //Compute IK for given endeffector pose
@@ -77,10 +84,13 @@ class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
     void attachObject(moveit_msgs::AttachedCollisionObject attached_object);
     void detachObject(moveit_msgs::AttachedCollisionObject attached_object);
 
+    //Function to set task frame constraints
+    //Note: if no task_frame (w.r.t base_link) is given the task_frame will be identical to the end-effector frame at the start config
+    void setTaskFrameConstraints(vector<int> cv, vector<pair<double, double> > coordinate_dev, bool task_pos_global, bool task_orient_global, boost::optional<KDL::Frame> task_frame = boost::none);
     //Function to set parameterized task frame
-    void setParameterizedTaskFrame(vector<int> cv, vector<pair<double,double> > coordinate_dev, bool task_pos_global, bool task_orient_global);
+    //void setParameterizedTaskFrame(vector<int> cv, vector<pair<double,double> > coordinate_dev, bool task_pos_global, bool task_orient_global);
     //Function to set fixed task frame
-    void setFixedTaskFrame(vector<int> cv, vector<pair<double,double> > coordinate_dev, KDL::Frame task_frame);
+    //void setFixedTaskFrame(vector<int> cv, vector<pair<double,double> > coordinate_dev, KDL::Frame task_frame);
 
     //Function to set edge cost weights (to punish certain joint motions)
     void setEdgeCostWeights(vector<double> ecw);
@@ -99,14 +109,21 @@ class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
     //Run RRT* Planner (given max. planning time or iterations)
     bool run_planner(int search_space, bool flag_iter_or_time, double max_iter_time, bool show_tree_vis, double iter_sleep, int planner_run_number = 0);
 
+    //Reset RRT* Planner Data
+    void reset_planner_and_config(); //reset everything, i.e. planner data and configuration such as edge cost weights, environment size, constraints
+    void reset_planner_only(); //reset planner only (planner configuration and environment data is kept)
+    void reset_planner_to_initial_state(); //reset planner to initial trees (containing only start and goal config) -> planner configuration and environment data is kept
+
+    // ----- Getters -----
+
     //Get the planned joint trajectory
     vector<vector<double> > getJointTrajectory();
     //Get the planned endeffector trajectory
     vector<vector<double> > getEndeffectorTrajectory();
-
-    //Reset RRT* Planner Data
-    void reset_planner_complete(); //reset everything
-    void reset_planner(); //reset planner to initial trees (containing only start and goal config)
+    //Get the number of joints the planning group is composed of
+    int getNumJointsPlanningGroup();
+    int getNumPrismaticJointsPlanningGroup();
+    int getNumRevoluteJointsPlanningGroup();
 
 
 
@@ -127,8 +144,8 @@ class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
 
     //Planning World and Environment Size
     boost::shared_ptr<planning_world::PlanningWorldBuilder> m_planning_world;
-    double m_env_size_x;
-    double m_env_size_y;
+    vector<double> m_env_size_x; //m_env_size_x[0] = size in negative x dir / m_env_size_x[1] = size in positive x dir
+    vector<double> m_env_size_y; //m_env_size_y[0] = size in negative y dir / m_env_size_y[1] = size in positive y dir
 
     //Planning Scene Monitor (used for Collision Checking)
     //planning_scene_monitor::PlanningSceneMonitorPtr m_planning_scene_monitor;
@@ -149,6 +166,11 @@ class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
 
     //Group for which planning is performed (set in constructor + must be a group defined in the robot srdf)
     string m_planning_group;
+
+    //Frame in which planning is performed
+    // -> "/map" frame if planning is performed in real environment
+    // -> "/base_link" frame if planning is performed in simulated environment
+    string m_planning_frame;
 
     //Kinematic Chain of robot
     KDL::Chain m_manipulator_chain;
@@ -216,6 +238,13 @@ class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
     //Step width from nearest neighbour in the direction of random sample
     double m_unconstraint_extend_step_factor;
 
+    //Flag indicating whether single or multiple steps are performed towards a random config
+    bool m_single_extend_step;
+
+    //Maximum planning time and path optimality treshold from param server
+    double  m_max_planning_time;
+    double m_path_optimality_treshold;
+
     //Cost solution path available
     bool m_solution_path_available;
 
@@ -240,6 +269,11 @@ class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
     double m_time_first_solution;
     double m_time_last_solution;
 
+
+    //Flag indicating whether transform between map and base_link is available
+    bool m_transform_map_to_base_available;
+    //Map to base_link transform
+    tf::StampedTransform m_transform_map_to_base;
 
     //Random number generator to generate a number between 0 and 1 for sampling the unit n-dimensional ball
     random_numbers::RandomNumberGenerator  m_random_number_generator;
@@ -302,6 +336,13 @@ class BiRRTstarPlanner : public robot_interface_definition::RobotInterface
     vector<double> sampleJointConfig_Vector(vector<double> mean_config, double std_dev);
     //Sample Configuration around mean config vector(as JntArray)
     KDL::JntArray sampleJointConfig_JntArray(vector<double> mean_config, double std_dev);
+
+    //Transform sample from base_link frame to map frame
+    void transform_sample_to_map_frame(KDL::JntArray& sample_conf);
+    void transform_sample_to_map_frame(vector<double> &sample_conf);
+    //Transform sample from map frame to base_link frame
+    void transform_sample_to_base_link_frame(KDL::JntArray &sample_conf);
+    void transform_sample_to_base_link_frame(vector<double> &sample_conf);
 
 
     //Tree expansions step

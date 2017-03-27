@@ -5,17 +5,18 @@ project(birrt_star_algorithm)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  kuka_motion_control
   moveit_ros_planning_interface
   planner_data_structures
   planning_heuristics
   planning_world_builder
   validity_checker
+  kuka_motion_control
   roscpp
   rospy
   std_msgs
-  robot_interface_definition
+  #robot_interface_definition
   tf
+  rviz_visual_tools
 )
 
 #Find OpenMP Package
@@ -130,7 +131,7 @@ endif (MSVC)
 catkin_package(
    INCLUDE_DIRS include
    LIBRARIES birrt_star_algorithm
-   CATKIN_DEPENDS kuka_motion_control planning_world_builder planner_data_structures validity_checker moveit_ros_planning_interface planning_heuristics roscpp rospy std_msgs robot_interface_definition
+   CATKIN_DEPENDS kuka_motion_control planning_world_builder planner_data_structures validity_checker moveit_ros_planning_interface planning_heuristics roscpp rospy std_msgs #robot_interface_definition
    DEPENDS system_lib
 )
 
@@ -154,6 +155,11 @@ include/birrt_star_algorithm/birrt_star.h
 ###########
 ## Build ##
 ###########
+
+ADD_DEFINITIONS(
+    -std=c++11
+    -D__cplusplus=201103L #for eclipse
+)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
@@ -194,7 +200,6 @@ target_link_libraries(birrt_star_robotino_node ${PROJECT_NAME} ${catkin_LIBRARIE
 
 target_link_libraries(birrt_star_pr2_base_node ${PROJECT_NAME} ${catkin_LIBRARIES})
 target_link_libraries(birrt_star_pr2_base_arm_node ${PROJECT_NAME} ${catkin_LIBRARIES})
-
 
 
 

@@ -49,6 +49,12 @@ class FeasibilityChecker
     bool isConfigValid(vector<double> config, bool print_contacts = false);
     bool isConfigValid(KDL::JntArray config, bool print_contacts = false);
 
+    //Get the current transform map to base_link
+    bool update_map_to_robot_transform();
+
+    //Reset class variables and data structures
+    bool reset_data();
+
     //Definition of virtual methods (used for solution path smoothing)
     //bool ConfigFeasible(const ParabolicRamp::Vector& x);
     //bool SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b);
@@ -78,6 +84,13 @@ class FeasibilityChecker
 
     //Number of joints
     int m_num_joints;
+    int m_num_joints_revolute;
+    int m_num_joints_prismatic;
+
+    //Flag indicating whether transform between map and base_link is available
+    bool m_transform_map_to_base_available;
+    //Map to base_link transform
+    tf::StampedTransform m_transform_map_to_base;
     
 	//Generate KDL Tree from robot urdf
     boost::shared_ptr<kuka_motion_controller::KDLRobotModel> m_KDLRobotModel;

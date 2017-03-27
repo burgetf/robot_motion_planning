@@ -1,7 +1,0 @@
-#
-# simInt simGetObjectParent(simInt objectHandle)
-#
-
-int32 handle
----
-int32 parentHandle

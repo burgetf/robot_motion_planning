@@ -28,8 +28,12 @@ int main(int argc, char** argv)
     //Load Planning World
     planning_world::PlanningWorldBuilder world_builder("robot_description", planning_group);
     //Enter Environment Borders
-    double env_size_x = 20.0;
-    double env_size_y = 20.0;
+    vector<double> env_size_x(2);
+    env_size_x[0] = -10.0;
+    env_size_x[1] = 10.0;
+    vector<double> env_size_y(2);
+    env_size_y[0] = -10.0;
+    env_size_y[1] = 10.0;
     double env_size_z = 0.6;
     world_builder.insertEnvironmentBorders(env_size_x,env_size_y,env_size_z);
 
@@ -212,7 +216,7 @@ int main(int argc, char** argv)
 
 
 
-    //Global Frame (top view)
+    //Global Frame (top view) -> Shows end-effector in base_link frame
     //       ^ Y
     //       |
     //       | f

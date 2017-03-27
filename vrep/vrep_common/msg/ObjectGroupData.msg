@@ -1,4 +1,0 @@
-std_msgs/Int32MultiArray handles
-std_msgs/Int32MultiArray intData
-std_msgs/Float32MultiArray floatData
-std_msgs/String stringData

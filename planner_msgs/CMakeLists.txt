@@ -59,19 +59,24 @@ add_message_files(
 ## Generate services in the 'srv' folder
 add_service_files(
    FILES
-   #Planner Setup services
+   #General Planner Services
    generate_start_goal_config.srv
    planning_scene_info.srv
+   reset_planner_to_default.srv
+
+   #Planner Setup Services
    set_edge_costs.srv
 
-   #Planner Run services
+   #Run Planner Services (Simulation)
    run_planner_configs.srv
    run_planner_config_file.srv
    run_planner_poses.srv
    run_planner_start_config_goal_pose.srv
 
-   #Trajectory Execution Services
-   execute_motion_plan.srv
+   #Run Planner Services (Real Robot)
+   run_planner_map_goal_pose.srv
+   run_planner_map_goal_config.srv
+
  )
 
 
@@ -101,13 +106,18 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES planner_msgs
-#  CATKIN_DEPENDS roscpp rospy std_msgs
+#   CATKIN_DEPENDS roscpp rospy std_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 
 ###########
 ## Build ##
 ###########
+
+ADD_DEFINITIONS(
+    -std=c++11
+    -D__cplusplus=201103L #for eclipse
+)
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations

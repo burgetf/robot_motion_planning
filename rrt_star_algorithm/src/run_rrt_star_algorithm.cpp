@@ -30,8 +30,12 @@ int main(int argc, char** argv)
     //Load Planning World
     planning_world::PlanningWorldBuilder world_builder("robot_description", planning_group);
     //Enter Environment Borders
-    double env_size_x = 20.0;
-    double env_size_y = 20.0;
+    vector<double> env_size_x(2);
+    env_size_x[0] = -10.0;
+    env_size_x[1] = 10.0;
+    vector<double> env_size_y(2);
+    env_size_y[0] = -10.0;
+    env_size_y[1] = 10.0;
     double env_size_z = 0.6;
     world_builder.insertEnvironmentBorders(env_size_x,env_size_y,env_size_z);
 
@@ -241,7 +245,7 @@ int main(int argc, char** argv)
     permitted_coordinate_dev[4].second = 0.0;   //positive Yrot deviation
     permitted_coordinate_dev[5].first = 0.0;    //negative Zrot deviation
     permitted_coordinate_dev[5].second = 0.0;   //positive Zrot deviation
-    //planner.setParameterizedTaskFrame(constraint_vector, permitted_coordinate_dev, true, true);
+    //planner.setTaskFrameConstraints(constraint_vector,permitted_coordinate_dev,true,true);
 
     //Set edge cost variable weights (to apply motion preferences)
     vector<double> edge_cost_weights(10);

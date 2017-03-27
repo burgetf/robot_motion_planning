@@ -1,8 +1,0 @@
-#
-# simInt simGetUIButtonProperty(simInt uiHandle,simInt buttonHandle)
-#
-
-int32 uiHandle
-int32 buttonID
----
-int32 propertyValue

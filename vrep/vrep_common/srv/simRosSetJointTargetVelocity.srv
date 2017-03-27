@@ -1,8 +1,0 @@
-#
-# simInt simSetJointTargetVelocity(simInt objectHandle,simFloat targetVelocity)
-#
-
-int32 handle
-float64 targetVelocity
----
-int32 result

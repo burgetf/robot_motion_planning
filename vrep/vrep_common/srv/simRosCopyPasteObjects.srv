@@ -1,8 +1,0 @@
-#
-# simxInt simxCopyPasteObjects(const simxInt* objectHandles,simxInt objectCount,simxInt** newObjectHandles,simxInt* newObjectCount)
-#
-
-int32[] objectHandles
----
-int32 result
-int32[] newObjectHandles

@@ -1,8 +1,0 @@
-#
-# simInt simClearFloatSignal(const simChar* signalName)
-#
-
-string signalName
----
-int32 result
-

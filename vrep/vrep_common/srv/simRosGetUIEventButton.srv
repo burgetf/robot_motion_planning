@@ -1,8 +1,0 @@
-#
-# simInt simGetUIEventButton(simInt uiHandle,simInt* auxiliaryValues)
-#
-
-int32 uiHandle
----
-int32 buttonID
-int32[] auxiliaryValues

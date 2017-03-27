@@ -1,8 +1,0 @@
-#
-# simInt simGetFloatingParameter(simInt parameter,simFloat* floatState)
-#
-
-int32 parameter
----
-int32 result
-float32 parameterValue

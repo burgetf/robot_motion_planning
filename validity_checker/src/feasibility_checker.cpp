@@ -30,6 +30,7 @@ FeasibilityChecker::FeasibilityChecker(string robot_desciption_param, string pla
 //    int t;
 //    cin>>t;
 
+
     //Check the planning frame (from virtual joint in srdf)
     //moveit::planning_interface::MoveGroup::Options opt(planning_group, robot_desciption_param);
     //moveit::planning_interface::MoveGroup group(opt);
@@ -38,7 +39,6 @@ FeasibilityChecker::FeasibilityChecker(string robot_desciption_param, string pla
 
 	//Planning Scene Monitor (required for collision checks)
     m_planning_scene_monitor =  boost::make_shared<planning_scene_monitor::PlanningSceneMonitor>(robot_desciption_param);
-
 
     //Namespace prefix for robot
     m_ns_prefix_robot = ns_prefix;
@@ -77,12 +77,17 @@ FeasibilityChecker::FeasibilityChecker(string robot_desciption_param, string pla
 
     //Number of joints
     m_num_joints = m_KDLRobotModel->getNumJoints();
+    m_num_joints_revolute = m_KDLRobotModel->getNumRevoluteJoints();
+    m_num_joints_prismatic = m_KDLRobotModel->getNumPrismaticJoints();
 	
     //Step width along an tree edge for collision checking (used only in "isEdgeValid(Edge)" function)
     m_nh.param("collision_check_extend_step_factor", m_collision_check_extend_step_factor, 0.3);
 
     //Step width along an tree edge for collision checking (used only in "isEdgeValid(Edge)" function)
     //m_collision_check_extend_step_factor = 0.3;
+
+    //Flag indicating whether transform between map and base_link is available
+    m_transform_map_to_base_available = false;
 
 }
 
@@ -140,25 +145,11 @@ bool FeasibilityChecker::isConfigValid(vector<double> config, bool print_contact
     //++++++++++ START: TESTING ++++++++++
 
     //Transform base config to /map frame only when localization is active (acml package)
-    if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
+    if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
     {
-        //Get current pose of robot in the map frame
-        tf::TransformListener listener;
+    	//cout<<"Name of Planning frame: "<<m_planning_frame<<endl;
 
-        //Flag indicating whether transform between map and base_link is available
-        bool transform_map_to_base_available = false;
-
-        tf::StampedTransform transform_map_to_base;
-        try {
-            listener.waitForTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), ros::Duration(10.0) );
-            listener.lookupTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), transform_map_to_base);
-            transform_map_to_base_available = true;
-        } catch (tf::TransformException ex) {
-            //ROS_ERROR("%s",ex.what());
-            transform_map_to_base_available = false;
-        }
-
-        if(transform_map_to_base_available)
+        if(m_transform_map_to_base_available)
         {
             //Transform base_link to sample
             tf::StampedTransform transform_base_to_sample;
@@ -168,7 +159,7 @@ bool FeasibilityChecker::isConfigValid(vector<double> config, bool print_contact
 
             //Transform map frame to sample
             tf::StampedTransform transform_map_to_sample;
-            transform_map_to_sample.mult(transform_map_to_base,transform_base_to_sample);
+            transform_map_to_sample.mult(m_transform_map_to_base,transform_base_to_sample);
 
             //Sample in map frame (as vector)
             vector<double> map_to_sample_conf(3);
@@ -295,27 +286,11 @@ bool FeasibilityChecker::isConfigValid(KDL::JntArray config, bool print_contacts
     //++++++++++ START: TESTING ++++++++++
 
     //Transform base config to /map frame only when localization is active (acml package)
-    if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
+    if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
     {
         //cout<<"Name of Planning frame: "<<m_planning_frame<<endl;
 
-        //Get current pose of robot in the map frame
-        tf::TransformListener listener;
-
-        //Flag indicating whether transform between map and base_link is available
-        bool transform_map_to_base_available = false;
-
-        tf::StampedTransform transform_map_to_base;
-        try {
-            listener.waitForTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), ros::Duration(10.0) );
-            listener.lookupTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), transform_map_to_base);
-            transform_map_to_base_available = true;
-        } catch (tf::TransformException ex) {
-            //ROS_ERROR("%s",ex.what());
-            transform_map_to_base_available = false;
-        }
-
-        if(transform_map_to_base_available)
+        if(m_transform_map_to_base_available)
         {
             //Transform base_link to sample
             tf::StampedTransform transform_base_to_sample;
@@ -325,7 +300,7 @@ bool FeasibilityChecker::isConfigValid(KDL::JntArray config, bool print_contacts
 
             //Transform map frame to sample
             tf::StampedTransform transform_map_to_sample;
-            transform_map_to_sample.mult(transform_map_to_base,transform_base_to_sample);
+            transform_map_to_sample.mult(m_transform_map_to_base,transform_base_to_sample);
 
             //Sample in map frame (as vector)
             vector<double> map_to_sample_conf(3);
@@ -337,9 +312,9 @@ bool FeasibilityChecker::isConfigValid(KDL::JntArray config, bool print_contacts
             map_to_sample_conf[2] = z_dir > 0.0 ? map_to_sample_rot.getAngle() : -map_to_sample_rot.getAngle();
 
             //cout<<"base_link in map frame:"<<endl;
-            //cout<<transform_map_to_base.getOrigin().x()<<endl;
-            //cout<<transform_map_to_base.getOrigin().y()<<endl;
-            //cout<<transform_map_to_base.getRotation().getAngle()<<endl;
+            //cout<<m_transform_map_to_base.getOrigin().x()<<endl;
+            //cout<<m_transform_map_to_base.getOrigin().y()<<endl;
+            //cout<<m_transform_map_to_base.getRotation().getAngle()<<endl;
 
             //cout<<"Config in base_link frame:"<<endl;
             //cout<<config(0)<<endl;
@@ -454,6 +429,162 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, bool print_contacts)
 {
 
 
+//    //Set name of planning scene service
+//    const std::string PLANNING_SCENE_SERVICE = m_planning_scene_service;
+
+//    //Get curent planning scene
+//    m_planning_scene_monitor->requestPlanningSceneState(PLANNING_SCENE_SERVICE);
+//    planning_scene_monitor::LockedPlanningSceneRW ps(m_planning_scene_monitor);
+//    ps->getCurrentStateNonConst().update();
+//    //if you want to modify it
+//    planning_scene::PlanningScenePtr scene = ps->diff();
+//    scene->decoupleParent();
+
+
+//    //Collision checking Setup
+//    collision_detection::CollisionRequest collision_request;
+//    collision_request.group_name = m_planning_group;
+//    collision_detection::CollisionResult collision_result;
+//    collision_detection::AllowedCollisionMatrix acm = scene->getAllowedCollisionMatrix();
+
+//    //For contact information
+//    collision_request.contacts = print_contacts;
+//    collision_request.max_contacts = 1000;
+
+
+//    //Init isValid flag to be returned by the function
+//    bool isValid = true;
+
+//    //Define start and goal node corresponding to first and last config of edge
+//    Node start_node;
+//    Node end_node;
+//    //Set start node to first config of egde
+//    start_node.config = tree_edge.joint_trajectory[0];
+
+
+//    //Get current pose of robot in the map frame
+//    tf::TransformListener listener;
+//    //Flag indicating whether transform between map and base_link is available
+//    bool m_transform_map_to_base_available = false;
+//    tf::StampedTransform m_transform_map_to_base;
+//    //Get TF only if planning frame is /map (i.e. localization is active)
+//    if(m_planning_frame == "/map"){
+//        try {
+//            listener.waitForTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), ros::Duration(10.0) );
+//            listener.lookupTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), m_transform_map_to_base);
+//            m_m_transform_map_to_base_available = true;
+//        } catch (tf::TransformException ex) {
+//            //ROS_ERROR("%s",ex.what());
+//            m_transform_map_to_base_available = false;
+//        }
+//    }
+
+
+//    bool trajectory_end_reached = false;
+//    while (trajectory_end_reached == false)
+//    {
+//        //Reset end node config to last edge config
+//        end_node.config = tree_edge.joint_trajectory[tree_edge.joint_trajectory.size()-1];
+//        //Modify end node config by stepping from the current start node towards the end node
+//        trajectory_end_reached = stepAlongEdge(start_node,end_node, m_collision_check_extend_step_factor);
+
+
+//        //++++++++++ START: TESTING ++++++++++
+
+//        if(m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
+//        {
+//            if(transform_map_to_base_available)
+//            {
+//                //Transform base_link to sample
+//                tf::StampedTransform transform_base_to_sample;
+//                transform_base_to_sample.setOrigin(tf::Vector3(end_node.config[0],end_node.config[1], 0.0));
+//                transform_base_to_sample.setRotation(tf::createQuaternionFromYaw(end_node.config[2]));
+
+
+//                //Transform map frame to sample
+//                tf::StampedTransform transform_map_to_sample;
+//                transform_map_to_sample.mult(m_transform_map_to_base,transform_base_to_sample);
+
+//                //Sample in map frame (as vector)
+//                vector<double> map_to_sample_conf(3);
+//                tf::Vector3 map_to_sample_trans = transform_map_to_sample.getOrigin();
+//                tf::Quaternion map_to_sample_rot = transform_map_to_sample.getRotation();
+//                map_to_sample_conf[0] = map_to_sample_trans.x();
+//                map_to_sample_conf[1] = map_to_sample_trans.y();
+//                double z_dir = transform_map_to_sample.getRotation().getAxis().z();
+//                map_to_sample_conf[2] = z_dir > 0.0 ? map_to_sample_rot.getAngle() : -map_to_sample_rot.getAngle();
+
+//                //Express base config w.r.t map frame
+//                end_node.config[0] = map_to_sample_conf[0];
+//                end_node.config[1] = map_to_sample_conf[1];
+//                end_node.config[2] = map_to_sample_conf[2];
+//            }
+//        }
+
+//        //++++++++++ END: TESTING ++++++++++
+
+//        //Set up Map storing the configuration of the robot
+//        std::map<std::string, double> configuration;
+//        for (int i = 0; i < m_num_joints ; i++)
+//        {
+//            configuration[m_joint_names[i]] = end_node.config[i];
+//            //std::cout<<m_joint_names[i] <<": "<<configuration[m_joint_names[i]]<<std::endl;
+//        }
+
+//        if (m_planning_group == "kuka_complete_arm" || m_planning_group == "omnirob_lbr_sdh")
+//        {
+//            configuration["sdh2_finger_12_joint"] = -1.57;
+//            configuration["sdh2_finger_22_joint"] = -1.57;
+//            configuration["sdh2_thumb_2_joint"] = -1.57;
+//        }
+
+//        //Assign the robot state to the Kinematic Model
+//        //robot_state::RobotState state(scene->getRobotModel());
+//        robot_state::RobotState state = scene->getCurrentStateNonConst();
+//        state.setToDefaultValues();
+
+//        //Set Configuration of robot state
+//        state.setVariablePositions(configuration);
+
+//        //Apply robot state to planning scene
+//        scene->setCurrentState(state);
+
+
+//        //--- Collision checking ---
+
+//        //Clear the collision checking result
+//        collision_result.clear();
+
+//        //Check for collisions
+//        scene->checkCollision(collision_request, collision_result, state, acm);
+
+
+//        //Write result of collision check to console and return false if an config of the edge is in collision
+//        if (collision_result.collision == 1)
+//        {
+//            //Set validity to false
+//            isValid = false;
+
+//            for(collision_detection::CollisionResult::ContactMap::const_iterator it = collision_result.contacts.begin(); it != collision_result.contacts.end();  ++it)
+//            {
+//              ROS_INFO("Contact between: %s and %s", it->first.first.c_str(), it->first.second.c_str());
+//            }
+
+//            //Return to function that called "isEdgeValid" if a colliding state has been detected
+//            return isValid;
+//        }
+//        else
+//        {
+//            //std::cout<< "Current edge config collision-free"<< std::endl;
+//        }
+
+//        //Set start node to extended config
+//        start_node.config = end_node.config;
+//    }
+
+//    return isValid;
+
+
     //Set name of planning scene service
     const std::string PLANNING_SCENE_SERVICE = m_planning_scene_service;
 
@@ -480,55 +611,25 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, bool print_contacts)
     //Init isValid flag to be returned by the function
     bool isValid = true;
 
-    //Define start and goal node corresponding to first and last config of edge
-    Node start_node;
-    Node end_node;
-    //Set start node to first config of egde
-    start_node.config = tree_edge.joint_trajectory[0];
 
-
-    //Get current pose of robot in the map frame
-    tf::TransformListener listener;
-    //Flag indicating whether transform between map and base_link is available
-    bool transform_map_to_base_available = false;
-    tf::StampedTransform transform_map_to_base;
-    //Get TF only if planning frame is /map (i.e. localization is active)
-    if(m_planning_frame == "/map"){
-        try {
-            listener.waitForTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), ros::Duration(10.0) );
-            listener.lookupTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), transform_map_to_base);
-            transform_map_to_base_available = true;
-        } catch (tf::TransformException ex) {
-            //ROS_ERROR("%s",ex.what());
-            transform_map_to_base_available = false;
-        }
-    }
-
-
-    bool trajectory_end_reached = false;
-    while (trajectory_end_reached == false)
+    //Iterate through configurations of the edge (edp = EDge Points)
+    for (int edp = 0 ; edp < tree_edge.joint_trajectory.size() ; edp++)
     {
-        //Reset end node config to last edge config
-        end_node.config = tree_edge.joint_trajectory[tree_edge.joint_trajectory.size()-1];
-        //Modify end node config by stepping from the current start node towards the end node
-        trajectory_end_reached = stepAlongEdge(start_node,end_node, m_collision_check_extend_step_factor);
 
-
-        //++++++++++ START: TESTING ++++++++++
-
-        if(m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh")
+        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
         {
-            if(transform_map_to_base_available)
+            if(m_transform_map_to_base_available)
             {
+
                 //Transform base_link to sample
                 tf::StampedTransform transform_base_to_sample;
-                transform_base_to_sample.setOrigin(tf::Vector3(end_node.config[0],end_node.config[1], 0.0));
-                transform_base_to_sample.setRotation(tf::createQuaternionFromYaw(end_node.config[2]));
+                transform_base_to_sample.setOrigin(tf::Vector3(tree_edge.joint_trajectory[edp][0],tree_edge.joint_trajectory[edp][1], 0.0));
+                transform_base_to_sample.setRotation(tf::createQuaternionFromYaw(tree_edge.joint_trajectory[edp][2]));
 
 
                 //Transform map frame to sample
                 tf::StampedTransform transform_map_to_sample;
-                transform_map_to_sample.mult(transform_map_to_base,transform_base_to_sample);
+                transform_map_to_sample.mult(m_transform_map_to_base,transform_base_to_sample);
 
                 //Sample in map frame (as vector)
                 vector<double> map_to_sample_conf(3);
@@ -540,21 +641,22 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, bool print_contacts)
                 map_to_sample_conf[2] = z_dir > 0.0 ? map_to_sample_rot.getAngle() : -map_to_sample_rot.getAngle();
 
                 //Express base config w.r.t map frame
-                end_node.config[0] = map_to_sample_conf[0];
-                end_node.config[1] = map_to_sample_conf[1];
-                end_node.config[2] = map_to_sample_conf[2];
+                tree_edge.joint_trajectory[edp][0] = map_to_sample_conf[0];
+                tree_edge.joint_trajectory[edp][1] = map_to_sample_conf[1];
+                tree_edge.joint_trajectory[edp][2] = map_to_sample_conf[2];
             }
         }
 
         //++++++++++ END: TESTING ++++++++++
 
-        //Set up Map storing the configuration of the robot
+        //Set up Map storing the configuration of manipulator
         std::map<std::string, double> configuration;
         for (int i = 0; i < m_num_joints ; i++)
         {
-            configuration[m_joint_names[i]] = end_node.config[i];
+            configuration[m_joint_names[i]] = tree_edge.joint_trajectory[edp][i];
             //std::cout<<m_joint_names[i] <<": "<<configuration[m_joint_names[i]]<<std::endl;
         }
+
 
         if (m_planning_group == "kuka_complete_arm" || m_planning_group == "omnirob_lbr_sdh")
         {
@@ -562,6 +664,7 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, bool print_contacts)
             configuration["sdh2_finger_22_joint"] = -1.57;
             configuration["sdh2_thumb_2_joint"] = -1.57;
         }
+
 
         //Assign the robot state to the Kinematic Model
         //robot_state::RobotState state(scene->getRobotModel());
@@ -575,121 +678,38 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, bool print_contacts)
         scene->setCurrentState(state);
 
 
-        //--- Collision checking ---
-
+        // -------------------------------- Collision checking -------------------------------------
         //Clear the collision checking result
         collision_result.clear();
 
         //Check for collisions
         scene->checkCollision(collision_request, collision_result, state, acm);
 
-
         //Write result of collision check to console and return false if an config of the edge is in collision
         if (collision_result.collision == 1)
         {
-            //Set validity to false
             isValid = false;
+            //std::cout<< "Edge config is in collision with an obstacle"<< std::endl;
 
             for(collision_detection::CollisionResult::ContactMap::const_iterator it = collision_result.contacts.begin(); it != collision_result.contacts.end();  ++it)
             {
               ROS_INFO("Contact between: %s and %s", it->first.first.c_str(), it->first.second.c_str());
             }
 
+
             //Return to function that called "isEdgeValid" if a colliding state has been detected
-            return isValid;
+            break;
         }
         else
         {
-            //std::cout<< "Current edge config collision-free"<< std::endl;
+            //std::cout<< "Edge config collision free <<std::endl;
         }
 
-        //Set start node to extended config
-        start_node.config = end_node.config;
     }
 
 
-//    //Iterate through configurations of the edge (edp = EDge Points)
-//    for (int edp = 0 ; edp < tree_edge.joint_trajectory.size() ; edp++)
-//    {
-
-//        //Set up Map storing the configuration of manipulator
-//        std::map<std::string, double> configuration;
-//        for (int i = 0; i < m_num_joints ; i++)
-//        {
-//            configuration[m_joint_names[i]] = tree_edge.joint_trajectory[edp][i];
-//            //std::cout<<m_joint_names[i] <<": "<<configuration[m_joint_names[i]]<<std::endl;
-//        }
-
-//        //Assign the robot state to the Kinematic Model
-//        robot_state::RobotState state(scene->getRobotModel());
-//        state.setToDefaultValues();
-
-//        //Set Configuration of robot state
-//        state.setVariablePositions(configuration);
-
-//        //Apply robot state to planning scene
-//        scene->setCurrentState(state);
-
-
-
-//        // -------------------------------- Collision checking -------------------------------------
-//        //Clear the collision checking result
-//        collision_result.clear();
-
-////        //Check for self- collisions
-////        scene->checkSelfCollision(collision_request, collision_result, state, acm);
-
-////        //Write result of collision check to console
-////        if (collision_result.collision == 1)
-////        {
-////            isValid = false;
-
-////            std::cout<< "Edge config is in self-collision !!!"<< std::endl;
-
-////            for(collision_detection::CollisionResult::ContactMap::const_iterator it = collision_result.contacts.begin(); it != collision_result.contacts.end();  ++it)
-////            {
-////              ROS_INFO("Contact between: %s and %s", it->first.first.c_str(), it->first.second.c_str());
-////            }
-
-////            return isValid;
-////        }
-////        else
-////        {
-////            std::cout<< "Edge config is in self-collision free!!!"<< std::endl;
-////        }
-
-//        //Check for collisions
-//        scene->checkCollision(collision_request, collision_result, state, acm);
-
-//        //double dist_to_coll = scene->distanceToCollision(state, acm);
-//        //cout<<"Distance to collision: "<<dist_to_coll<<endl;
-
-//        //Print collision checking results
-//        //ROS_INFO_STREAM("Current state is " << (collision_result.collision ? "in" : "not in") << " self collision");
-
-//        //Write result of collision check to console and return false if an config of the edge is in collision
-//        if (collision_result.collision == 1)
-//        {
-//            isValid = false;
-//            //std::cout<< "Edge config is in collision with an obstacle"<< std::endl;
-
-//            for(collision_detection::CollisionResult::ContactMap::const_iterator it = collision_result.contacts.begin(); it != collision_result.contacts.end();  ++it)
-//            {
-//              ROS_INFO("Contact between: %s and %s", it->first.first.c_str(), it->first.second.c_str());
-//            }
-
-
-//            //Return to function that called "isEdgeValid" if a colliding state has been detected
-//            return isValid;
-//        }
-//        else
-//        {
-//            //std::cout<< "Current edge config collision-free"<< std::endl;
-//        }
-//    }
-
-
     return isValid;
+
 }
 
 
@@ -727,31 +747,14 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, int &last_valid_node_idx, b
     last_valid_node_idx = 0;
 
 
-    //Get current pose of robot in the map frame
-    tf::TransformListener listener;
-    //Flag indicating whether transform between map and base_link is available
-    bool transform_map_to_base_available = false;
-    tf::StampedTransform transform_map_to_base;
-    //Get TF only if planning frame is /map (i.e. localization is active)
-    if(m_planning_frame == "/map"){
-        try {
-            listener.waitForTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), ros::Duration(10.0) );
-            listener.lookupTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), transform_map_to_base);
-            transform_map_to_base_available = true;
-        } catch (tf::TransformException ex) {
-            //ROS_ERROR("%s",ex.what());
-            transform_map_to_base_available = false;
-        }
-    }
-
     //Iterate through configurations of the edge (edp = EDge Points)
     for (int edp = 0 ; edp < tree_edge.joint_trajectory.size() ; edp++)
     {
         //cout<<edp<<endl;
 
-        if(m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh")
+        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
         {
-            if(transform_map_to_base_available)
+            if(m_transform_map_to_base_available)
             {
                 //Transform base_link to sample
                 tf::StampedTransform transform_base_to_sample;
@@ -761,7 +764,7 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, int &last_valid_node_idx, b
 
                 //Transform map frame to sample
                 tf::StampedTransform transform_map_to_sample;
-                transform_map_to_sample.mult(transform_map_to_base,transform_base_to_sample);
+                transform_map_to_sample.mult(m_transform_map_to_base,transform_base_to_sample);
 
                 //Sample in map frame (as vector)
                 vector<double> map_to_sample_conf(3);
@@ -829,7 +832,6 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, int &last_valid_node_idx, b
 
 
             //Return to function that called "isEdgeValid" if a colliding state has been detected
-            //return isValid;
             break;
         }
         else
@@ -1047,61 +1049,32 @@ bool FeasibilityChecker::stepAlongEdge(Node start_node, Node &end_node, double e
 }
 
 
-//// ------------------------------ Solution Path Smoothing -----------------------------------------------------
-////Config and Segment/Edge Validity Checks for Solution Path Smoothing (Definition of Virtual Methods)
-//bool FeasibilityChecker::ConfigFeasible(const ParabolicRamp::Vector& x)
-//{
-//    //The configuration
-//    vector<double> configuration(m_num_joints);
+//Get the current transform map to base_link
+bool FeasibilityChecker::update_map_to_robot_transform()
+{
+    //Get current pose of robot in the map frame
+    tf::TransformListener listener;
 
-//    //Convert ParabolicRamp::Vector into double vector
-//    for(int j = 0 ; j < m_num_joints ; j++)
-//     configuration[j] = x[j];
+    try {
+        listener.waitForTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), ros::Duration(10.0) );
+        listener.lookupTransform("/map", m_ns_prefix_robot + "base_link", ros::Time(0), m_transform_map_to_base);
+        m_transform_map_to_base_available = true;
+    } catch (tf::TransformException ex) {
+        //ROS_ERROR("%s",ex.what());
+        m_transform_map_to_base_available = false;
+    }
 
-//    return isConfigValid(configuration);
-
-//}
-
-//bool FeasibilityChecker::SegmentFeasible(const ParabolicRamp::Vector& a,const ParabolicRamp::Vector& b)
-//{
-//    //Number of intermediate points
-//    int num_points = 20;
-
-//    //C-Space distance and step_width
-//    vector<double> c_space_dist(m_num_joints);
-//    vector<double> c_space_step_width(m_num_joints);
+    return m_transform_map_to_base_available;
+}
 
 
-//    //Compute step width for each joint
-//    for(int j = 0 ; j < m_num_joints ; j++)
-//    {
-//        c_space_dist[j] = b[j] - a[j];
-//        c_space_step_width[j] = c_space_dist[j] / double(num_points);
-//        //cout<<c_space_dist[j] / double(num_points)<<endl;
-//    }
-//    //cout<<endl;
+//Reset class variables and data structures
+bool FeasibilityChecker::reset_data()
+{
+    //Reset map to base transform availability
+    m_transform_map_to_base_available = false;
+}
 
-//    //Iterate through points along the segment/edge
-//    vector<double> c_space_via_point_vector(m_num_joints);
-//    for(int inc = 0 ; inc <= num_points ; inc++)
-//    {
-//        //cout<<"Config on joint traj: "<<endl;
-//        for(int j = 0 ; j < m_num_joints ; j++)
-//        {
-//            c_space_via_point_vector[j] = a[j] + inc * c_space_step_width[j];
-//            //cout<<c_space_via_point_vector[j]<<endl;
-//        }
-
-//        //Return false when an invalid intermediate config has been encountered
-//        if(!isConfigValid(c_space_via_point_vector))
-//            return false;
-//    }
-
-
-//    //Segment Feasibility Check passed!
-//    return true;
-
-//}
 
 
 } //end of namespace

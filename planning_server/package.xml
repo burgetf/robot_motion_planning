@@ -47,8 +47,12 @@
   <build_depend>rrt_star_algorithm</build_depend>
   <build_depend>std_msgs</build_depend>
   <!--<build_depend>planning_world_builder</build_depend>-->
-  <build_depend>motion_trajectory_execution</build_depend>
+  <!--<build_depend>motion_trajectory_execution</build_depend> -->
+  <build_depend>eigen_conversions</build_depend>
 
+
+
+  
 
   <run_depend>birrt_star_algorithm</run_depend>
   <run_depend>planner_msgs</run_depend>
@@ -57,7 +61,8 @@
   <run_depend>rrt_star_algorithm</run_depend>
   <run_depend>std_msgs</run_depend>
   <!--<run_depend>planning_world_builder</run_depend>-->
-  <run_depend>motion_trajectory_execution</run_depend>
+  <!-- <run_depend>motion_trajectory_execution</run_depend> -->
+  <run_depend>eigen_conversions</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

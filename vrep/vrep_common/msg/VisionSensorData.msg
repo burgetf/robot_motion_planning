@@ -1,3 +1,0 @@
-std_msgs/Int32 triggerState
-std_msgs/Float32MultiArray packetData
-std_msgs/Int32MultiArray packetSizes

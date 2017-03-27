@@ -1,8 +1,0 @@
-#
-# simxInt simxGetObjects(simxInt objectType,simxInt* objectCount,simxInt** objectHandles,simxInt operationMode)
-#
-
-int32 objectType
----
-int32 result
-int32[] handles

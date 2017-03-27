@@ -22,7 +22,7 @@ class PlanningWorldBuilder
     ~PlanningWorldBuilder();
 	
     //Insert Borders, i.e. walls confining the robot's workspace
-    void insertEnvironmentBorders(double size_x, double size_y, double wall_height, string scene_name  = "empty_scene");
+    void insertEnvironmentBorders(vector<double> size_x, vector<double> size_y, double wall_height, string scene_name  = "empty_scene");
 
     //----------------------- Insert Obstacles ----------------------------
 
@@ -101,7 +101,7 @@ class PlanningWorldBuilder
     //----------------------- Get Functions ----------------------------
 
     //Get the size of the environment
-    void getEnvironmentDimensions(double& dim_x,double& dim_y);
+    void getEnvironmentDimensions(vector<double> &dim_x, vector<double> &dim_y);
 
     //Get Name of the loaded Environment
     string getSceneName(){return m_scene_name;}
@@ -136,8 +136,9 @@ class PlanningWorldBuilder
     string m_scene_name;
 
     //Environment size
-    double m_env_dim_x;
-    double m_env_dim_y;
+    vector<double> m_env_dim_x; //m_env_dim_x[0] = size in negative x dir / m_env_dim_x[1] = size in positive x dir
+    vector<double> m_env_dim_y; //m_env_dim_y[0] = size in negative y dir / m_env_dim_y[1] = size in positive y dir
+
 
     //Number of walls
     int m_num_walls;

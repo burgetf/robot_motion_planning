@@ -12,7 +12,8 @@ find_package(catkin REQUIRED COMPONENTS
   rrt_star_algorithm
   birrt_star_algorithm
   #planning_world_builder
-  motion_trajectory_execution
+  #motion_trajectory_execution
+  eigen_conversions
 )
 
 ## System dependencies are found with CMake's conventions
@@ -106,8 +107,8 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
    INCLUDE_DIRS include
-#  LIBRARIES planning_server
-#  CATKIN_DEPENDS birrt_star_algorithm planner_msgs roscpp rospy rrt_star_algorithm std_msgs
+   LIBRARIES planning_server
+   CATKIN_DEPENDS roscpp rospy std_msgs planner_msgs birrt_star_algorithm rrt_star_algorithm
 #  DEPENDS system_lib
 )
 
@@ -115,6 +116,10 @@ catkin_package(
 ## Build ##
 ###########
 
+ADD_DEFINITIONS(
+    -std=c++11
+    -D__cplusplus=201103L #for eclipse
+)
 
 set(PLANNING_SERVER_LIBRARIES
     #CPP Files
@@ -152,6 +157,9 @@ target_link_libraries(planning_service_node ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
+
+#add_executable(base_planning_service src/base_motion_planning_service.cpp)
+#target_link_libraries(base_planning_service ${PROJECT_NAME} ${catkin_LIBRARIES})
 
 #############
 ## Install ##

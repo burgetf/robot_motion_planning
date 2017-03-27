@@ -1,9 +1,0 @@
-#
-# simInt simAuxiliaryConsoleShow(simInt consoleHandle,simBool showState)
-#
-
-int32 consoleHandle
-uint8 showState
----
-int32 result
-

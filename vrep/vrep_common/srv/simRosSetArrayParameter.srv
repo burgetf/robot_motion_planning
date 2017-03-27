@@ -1,8 +1,0 @@
-#
-# simInt simSetArrayParameter(simInt parameter,simVoid* parameterValues)
-#
-
-int32 parameter
-float32[] parameterValues
----
-int32 result

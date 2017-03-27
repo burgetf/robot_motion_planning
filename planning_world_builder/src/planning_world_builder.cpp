@@ -28,8 +28,12 @@ PlanningWorldBuilder::PlanningWorldBuilder(string robot_desciption_param, string
     m_num_walls = 0;
 
     //Environment size
-    m_env_dim_x = 0.0;
-    m_env_dim_y = 0.0;
+    m_env_dim_x.resize(2);
+    m_env_dim_x[0] = 0.0; //env dim in negative x dir
+    m_env_dim_x[1] = 0.0; //env dim in positive x dir
+    m_env_dim_y.resize(2);
+    m_env_dim_y[0] = 0.0; //env dim in negative y dir
+    m_env_dim_y[1] = 0.0; //env dim in positive y dir
 
     //Set default Scene Name
     m_scene_name = "none";
@@ -46,14 +50,16 @@ PlanningWorldBuilder::~PlanningWorldBuilder()
 
 
 //Insert Borders confining the environment
-void PlanningWorldBuilder::insertEnvironmentBorders(double size_x, double size_y, double wall_height, string scene_name)
+void PlanningWorldBuilder::insertEnvironmentBorders(vector<double> size_x, vector<double> size_y, double wall_height, string scene_name)
 {
     //Set wall thickness
     double wall_thickness = 0.2;
 
-    //Store environment dimensions
-    m_env_dim_x = size_x;
-    m_env_dim_y = size_y;
+    //Store environment dimensions  
+    m_env_dim_x[0] = size_x[0];
+    m_env_dim_x[1] = size_x[1];
+    m_env_dim_y[0] = size_y[0];
+    m_env_dim_y[1] = size_y[1];
 
     //Set Scene Name
     m_scene_name = scene_name;
@@ -64,50 +70,50 @@ void PlanningWorldBuilder::insertEnvironmentBorders(double size_x, double size_y
     walls.id = "environment_borders";
 
     geometry_msgs::Pose wall_1;
-    wall_1.position.x = size_x/2.0 + wall_thickness/2.0;
-    wall_1.position.y = 0.0;
+    wall_1.position.x = m_env_dim_x[1] + wall_thickness/2.0;
+    wall_1.position.y = m_env_dim_y[1] + m_env_dim_y[0];
     wall_1.position.z = wall_height/2.0;
     wall_1.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive_1;
     primitive_1.type = primitive_1.BOX;
     primitive_1.dimensions.resize(3);
     primitive_1.dimensions[0] = wall_thickness; //X dim
-    primitive_1.dimensions[1] = size_y + wall_thickness*2.0; //Y dim
+    primitive_1.dimensions[1] = (m_env_dim_y[1] - m_env_dim_y[0]) + wall_thickness*2.0; //Y dim
     primitive_1.dimensions[2] = wall_height; //Z dim
 
     geometry_msgs::Pose wall_2;
-    wall_2.position.x = - (size_x/2.0 + wall_thickness/2.0);
-    wall_2.position.y = 0.0;
+    wall_2.position.x = m_env_dim_x[0] - (wall_thickness/2.0);
+    wall_2.position.y = m_env_dim_y[1] + m_env_dim_y[0];
     wall_2.position.z = wall_height/2.0;
     wall_2.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive_2;
     primitive_2.type = primitive_2.BOX;
     primitive_2.dimensions.resize(3);
     primitive_2.dimensions[0] = wall_thickness; //X dim
-    primitive_2.dimensions[1] = size_y + wall_thickness*2.0; //Y dim
+    primitive_2.dimensions[1] = (m_env_dim_y[1]-m_env_dim_y[0]) + wall_thickness*2.0; //Y dim
     primitive_2.dimensions[2] = wall_height; //Z dim
 
     geometry_msgs::Pose wall_3;
-    wall_3.position.x = 0.0;
-    wall_3.position.y = - (size_y/2.0 + wall_thickness/2.0);
+    wall_3.position.x = m_env_dim_x[1] + m_env_dim_x[0];
+    wall_3.position.y = m_env_dim_y[0] - wall_thickness/2.0;
     wall_3.position.z = wall_height/2.0;
     wall_3.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive_3;
     primitive_3.type = primitive_3.BOX;
     primitive_3.dimensions.resize(3);
-    primitive_3.dimensions[0] = size_x; //X dim
+    primitive_3.dimensions[0] = m_env_dim_x[1] - m_env_dim_x[0]; //X dim
     primitive_3.dimensions[1] = wall_thickness; //Y dim
     primitive_3.dimensions[2] = wall_height; //Z dim
 
     geometry_msgs::Pose wall_4;
-    wall_4.position.x = 0.0;
-    wall_4.position.y = size_y/2.0 + wall_thickness/2.0;
+    wall_4.position.x = m_env_dim_x[1] + m_env_dim_x[0];
+    wall_4.position.y = m_env_dim_y[1] + wall_thickness/2.0;
     wall_4.position.z = wall_height/2.0;
     wall_4.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive_4;
     primitive_4.type = primitive_4.BOX;
     primitive_4.dimensions.resize(3);
-    primitive_4.dimensions[0] = size_x; //X dim
+    primitive_4.dimensions[0] = m_env_dim_x[1] - m_env_dim_x[0]; //X dim
     primitive_4.dimensions[1] = wall_thickness; //Y dim
     primitive_4.dimensions[2] = wall_height; //Z dim
 
@@ -470,11 +476,11 @@ void PlanningWorldBuilder::insertMaze(int num_walls, double wall_thickness, doub
 
     //Wall width and length
     double wall_width = wall_thickness;
-    double wall_length = m_env_dim_y * wall_length_ratio;
+    double wall_length = (m_env_dim_y[1]-m_env_dim_y[0]) * wall_length_ratio;
     double wall_height = 0.6;
 
     //Width of free space passages (in x-direction)
-    double width_free_space_elements = (m_env_dim_x - (num_walls * wall_width)) / (num_walls+1);
+    double width_free_space_elements = ((m_env_dim_x[1]-m_env_dim_x[0]) - (num_walls * wall_width)) / (num_walls+1);
 
     //Setup
     moveit_msgs::CollisionObject coll_object;
@@ -495,8 +501,8 @@ void PlanningWorldBuilder::insertMaze(int num_walls, double wall_thickness, doub
         if(wall_num % 2 != 0)
         {
             //Pose
-            pose.position.x = -m_env_dim_x/2.0 + wall_num * width_free_space_elements + wall_num * wall_width - wall_width/2.0;
-            pose.position.y = m_env_dim_y/2.0 - wall_length/2.0;
+            pose.position.x = m_env_dim_x[0] + wall_num * width_free_space_elements + wall_num * wall_width - wall_width/2.0;
+            pose.position.y = m_env_dim_y[1] - wall_length/2.0;
             pose.position.z = wall_height/2.0;
             pose.orientation.w = 1.0;
             //Primitive
@@ -509,8 +515,8 @@ void PlanningWorldBuilder::insertMaze(int num_walls, double wall_thickness, doub
         else
         {
             //Pose
-            pose.position.x = -m_env_dim_x/2.0 + wall_num * width_free_space_elements + wall_num * wall_width - wall_width/2.0;
-            pose.position.y = -m_env_dim_y/2.0 + wall_length/2.0;
+            pose.position.x = m_env_dim_x[0] + wall_num * width_free_space_elements + wall_num * wall_width - wall_width/2.0;
+            pose.position.y = m_env_dim_y[0] + wall_length/2.0;
             pose.position.z = wall_height/2.0;
             pose.orientation.w = 1.0;
             //Primitive
@@ -556,11 +562,11 @@ void PlanningWorldBuilder::insertNarrowPassage(double wall_thickness, double wal
     double wall_length;
     if(0.5 < wall_length_ratio)
     {
-        wall_length = 0.5 * m_env_dim_y;
+        wall_length = 0.5 * (m_env_dim_y[1]-m_env_dim_y[0]);
         ROS_INFO("wall_length_ratio reset to 0.5!");
     }
     else
-        wall_length = wall_length_ratio * m_env_dim_y;
+        wall_length = wall_length_ratio * (m_env_dim_y[1]-m_env_dim_y[0]);
     double wall_height = 0.6;
 
     //Setup
@@ -576,7 +582,7 @@ void PlanningWorldBuilder::insertNarrowPassage(double wall_thickness, double wal
 
     geometry_msgs::Pose pose;
     pose.position.x = 0.0;
-    pose.position.y = m_env_dim_y/2.0 - wall_length/2.0;
+    pose.position.y = m_env_dim_y[1] - wall_length/2.0;
     pose.position.z = wall_height/2.0;
     pose.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive;
@@ -588,7 +594,7 @@ void PlanningWorldBuilder::insertNarrowPassage(double wall_thickness, double wal
 
     geometry_msgs::Pose pose2;
     pose2.position.x = 0.0;
-    pose2.position.y = -m_env_dim_y/2.0 + wall_length/2.0;
+    pose2.position.y = m_env_dim_y[0] + wall_length/2.0;
     pose2.position.z = wall_height/2.0;
     pose2.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive2;
@@ -630,14 +636,14 @@ void PlanningWorldBuilder::insertThreeGatesPassage(double wall_thickness, double
     double wall_length;
     if(0.5 < wall_length_ratio)
     {
-        wall_length = 0.5 * m_env_dim_y;
+        wall_length = 0.5 * (m_env_dim_y[1]-m_env_dim_y[0]);
         ROS_INFO("wall_length_ratio reset to 0.5!");
     }
     else
-        wall_length = wall_length_ratio * m_env_dim_y;
+        wall_length = wall_length_ratio * (m_env_dim_y[1]-m_env_dim_y[0]);
     double wall_height = 0.6;
     //Free Space between each wall (in y-direction)
-    double free_space_width = (m_env_dim_y - 2*wall_length) / 3.0;
+    double free_space_width = ((m_env_dim_y[1]-m_env_dim_y[0]) - 2*wall_length) / 3.0;
 
     //Setup
     moveit_msgs::CollisionObject coll_object;
@@ -652,7 +658,7 @@ void PlanningWorldBuilder::insertThreeGatesPassage(double wall_thickness, double
 
     geometry_msgs::Pose pose;
     pose.position.x = 0.0;
-    pose.position.y = m_env_dim_y/2.0 - free_space_width - wall_length/2.0;
+    pose.position.y = m_env_dim_y[1] - free_space_width - wall_length/2.0;
     pose.position.z = wall_height/2.0;
     pose.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive;
@@ -664,7 +670,7 @@ void PlanningWorldBuilder::insertThreeGatesPassage(double wall_thickness, double
 
     geometry_msgs::Pose pose2;
     pose2.position.x = 0.0;
-    pose2.position.y = -m_env_dim_y/2.0 + free_space_width + wall_length/2.0;
+    pose2.position.y = m_env_dim_y[0] + free_space_width + wall_length/2.0;
     pose2.position.z = wall_height/2.0;
     pose2.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive2;
@@ -716,7 +722,7 @@ void PlanningWorldBuilder::insertTunnelPassage(double tunnel_width, double tunne
     double height_tunnel_passage = tunnel_height; // in m
 
     //Wall length
-    double wall_length = wall_length_ratio * m_env_dim_x;
+    double wall_length = wall_length_ratio * (m_env_dim_x[1]-m_env_dim_x[0]);
     double wall_height = height_tunnel_passage + 0.4; //in [m]
 
     //Setup
@@ -746,7 +752,7 @@ void PlanningWorldBuilder::insertTunnelPassage(double tunnel_width, double tunne
     //Top Wall
     geometry_msgs::Pose pose2;
     pose2.position.x = 0.0;
-    double block_length = m_env_dim_y/2.0 - width_tunnel_passage/2.0;
+    double block_length = m_env_dim_y[1] - width_tunnel_passage/2.0;
     pose2.position.y = width_tunnel_passage/2.0 + block_length/2.0;
     pose2.position.z = wall_height/2.0;
     pose2.orientation.w = 1.0;
@@ -819,26 +825,26 @@ void PlanningWorldBuilder::insertTwoRoomsOffice(double wall_thickness, double wi
     coll_object.operation = moveit_msgs::CollisionObject::ADD;
 
     //Wall height
-    double block_size_x = m_env_dim_x/2.0 ;
-    double block_size_y = m_env_dim_y/2.0 - 0.1;
+    double block_size_x = (m_env_dim_x[1]-m_env_dim_x[0])/2.0 ;
+    double block_size_y = m_env_dim_y[1] - 0.1;
 
     //Block Object
     geometry_msgs::Pose pose;
-    pose.position.x = m_env_dim_x/2.0 - block_size_x/2.0;
-    pose.position.y = m_env_dim_y/2.0 - block_size_y/2.0;
+    pose.position.x = m_env_dim_x[1] - block_size_x/2.0;
+    pose.position.y = m_env_dim_y[1] - block_size_y/2.0;
     pose.position.z = wall_height/2.0;
     pose.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive;
     primitive.type = primitive.BOX;
     primitive.dimensions.resize(3);
-    primitive.dimensions[0] = m_env_dim_x/2.0; //X dim
-    primitive.dimensions[1] = m_env_dim_y/2.0; //Y dim
+    primitive.dimensions[0] = m_env_dim_x[1]; //X dim
+    primitive.dimensions[1] = m_env_dim_y[1]; //Y dim
     primitive.dimensions[2] = wall_height; //Z dim
 
     //Narrow Passage
     geometry_msgs::Pose pose2;
     pose2.position.x = wall_thickness/2.0;
-    double block_length = (m_env_dim_y/2.0 - width_narrow_passage)/2.0;
+    double block_length = (m_env_dim_y[1] - width_narrow_passage)/2.0;
     pose2.position.y = -block_length/2.0;
     pose2.position.z = wall_height/2.0;
     pose2.orientation.w = 1.0;
@@ -851,7 +857,7 @@ void PlanningWorldBuilder::insertTwoRoomsOffice(double wall_thickness, double wi
 
     geometry_msgs::Pose pose3;
     pose3.position.x = wall_thickness/2.0;
-    pose3.position.y = block_length/2.0 - m_env_dim_y/2.0;
+    pose3.position.y = block_length/2.0 + m_env_dim_y[0];
     pose3.position.z = wall_height/2.0;
     pose3.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive3;
@@ -892,7 +898,7 @@ void PlanningWorldBuilder::insertNarrowCorridor(double corridor_width, double wa
     m_scene_name = "corridor_scene";
 
     //Wall length
-    double wall_length = wall_length_ratio * m_env_dim_x;
+    double wall_length = wall_length_ratio * (m_env_dim_x[1]-m_env_dim_x[0]);
     double wall_height = 0.6;
 
     //Setup
@@ -908,7 +914,7 @@ void PlanningWorldBuilder::insertNarrowCorridor(double corridor_width, double wa
 
     //Length of a block
     double off_center_y = 0.6; //Offset from global frame in y-direction
-    double total_block_length = (m_env_dim_y - 2*corridor_width) - 2*off_center_y;
+    double total_block_length = (m_env_dim_y[1] - 2*corridor_width) - 2*off_center_y;
     double single_block_length = total_block_length/2.0;
 
     //Block 1
@@ -1005,12 +1011,12 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
     coll_object.operation = moveit_msgs::CollisionObject::ADD;
 
 
-    double block_length = (m_env_dim_y - (3*width_tunnel_passage))/4.0;
+    double block_length = ((m_env_dim_y[1]-m_env_dim_y[0]) - (3*width_tunnel_passage))/4.0;
 
     // ---------------------- Tunnel Passages ------------------------
     //Floor Beams
     geometry_msgs::Pose beam1;
-    beam1.position.x = -m_env_dim_x/5 + obstacle_offset_x_dir;
+    beam1.position.x = -(m_env_dim_x[1]-m_env_dim_x[0])/5 + obstacle_offset_x_dir;
     beam1.position.y = 0.0;
     beam1.position.z = height_tunnel_passage + ((wall_height - height_tunnel_passage)/2.0);
     beam1.orientation.w = 1.0;
@@ -1023,7 +1029,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
 
     geometry_msgs::Pose beam2;
-    beam2.position.x = -m_env_dim_x/5 + obstacle_offset_x_dir;
+    beam2.position.x = -(m_env_dim_x[1]-m_env_dim_x[0])/5 + obstacle_offset_x_dir;
     beam2.position.y = block_length + width_tunnel_passage;
     beam2.position.z = height_tunnel_passage + ((wall_height - height_tunnel_passage)/2.0);
     beam2.orientation.w = 1.0;
@@ -1036,7 +1042,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
 
     geometry_msgs::Pose beam3;
-    beam3.position.x = -m_env_dim_x/5 + obstacle_offset_x_dir;
+    beam3.position.x = -(m_env_dim_x[1]-m_env_dim_x[0])/5 + obstacle_offset_x_dir;
     beam3.position.y = -block_length - width_tunnel_passage;
     beam3.position.z = height_tunnel_passage + ((wall_height - height_tunnel_passage)/2.0);
     beam3.orientation.w = 1.0;
@@ -1049,7 +1055,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
     //Top Wall
     geometry_msgs::Pose wall_1;
-    wall_1.position.x = -m_env_dim_x/5+ obstacle_offset_x_dir;
+    wall_1.position.x = -(m_env_dim_x[1]-m_env_dim_x[0])/5 + obstacle_offset_x_dir;
     wall_1.position.y = 1.5 * block_length + 1.5 * width_tunnel_passage;
     wall_1.position.z = wall_height/2.0;
     wall_1.orientation.w = 1.0;
@@ -1062,7 +1068,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
     //Center Top Wall
     geometry_msgs::Pose wall_2;
-    wall_2.position.x = -m_env_dim_x/5+ obstacle_offset_x_dir;
+    wall_2.position.x = -(m_env_dim_x[1]-m_env_dim_x[0])/5 + obstacle_offset_x_dir;
     wall_2.position.y = 0.5 * block_length + 0.5 * width_tunnel_passage;
     wall_2.position.z = wall_height/2.0;
     wall_2.orientation.w = 1.0;
@@ -1075,7 +1081,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
     //Center Lower Wall
     geometry_msgs::Pose wall_3;
-    wall_3.position.x = -m_env_dim_x/5+ obstacle_offset_x_dir;
+    wall_3.position.x = -(m_env_dim_x[1]-m_env_dim_x[0])/5 + obstacle_offset_x_dir;
     wall_3.position.y = -0.5 * block_length - 0.5 * width_tunnel_passage;
     wall_3.position.z = wall_height/2.0;
     wall_3.orientation.w = 1.0;
@@ -1088,7 +1094,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
     //Bottom Wall
     geometry_msgs::Pose wall_4;
-    wall_4.position.x = -m_env_dim_x/5+ obstacle_offset_x_dir;
+    wall_4.position.x = -(m_env_dim_x[1]-m_env_dim_x[0])/5 + obstacle_offset_x_dir;
     wall_4.position.y = -1.5 * block_length - 1.5 * width_tunnel_passage;
     wall_4.position.z = wall_height/2.0;
     wall_4.orientation.w = 1.0;
@@ -1112,14 +1118,14 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
     primitive_ceiling.type = primitive_ceiling.BOX;
     primitive_ceiling.dimensions.resize(3);
     primitive_ceiling.dimensions[0] = wall_thickness; //X dim
-    primitive_ceiling.dimensions[1] = m_env_dim_y; //Y dim
+    primitive_ceiling.dimensions[1] = (m_env_dim_y[1]-m_env_dim_y[0]); //Y dim
     primitive_ceiling.dimensions[2] = wall_height - height_ceiling_passage; //Z dim
 
 
     // ---------------------- Narrow Passage ------------------------
 
 //    geometry_msgs::Pose pose5;
-//    pose5.position.x = m_env_dim_x/5+ obstacle_offset_x_dir;
+//    pose5.position.x = (m_env_dim_x[1]-m_env_dim_x[0])/5+ obstacle_offset_x_dir;
 //    pose5.position.y = m_env_dim_y/2.0 - (m_env_dim_y/2.0 - width_tunnel_passage/2.0)/2.0;
 //    pose5.position.z = wall_height/2.0;
 //    pose5.orientation.w = 1.0;
@@ -1131,7 +1137,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 //    primitive5.dimensions[2] = wall_height; //Z dim
 
 //    geometry_msgs::Pose pose6;
-//    pose6.position.x = m_env_dim_x/5+ obstacle_offset_x_dir;
+//    pose6.position.x = (m_env_dim_x[1]-m_env_dim_x[0])/5+ obstacle_offset_x_dir;
 //    pose6.position.y = -m_env_dim_y/2.0 + (m_env_dim_y/2.0 - width_tunnel_passage/2.0)/2.0;
 //    pose6.position.z = wall_height/2.0;
 //    pose6.orientation.w = 1.0;
@@ -1146,7 +1152,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
 //    //Top Wall
 //    geometry_msgs::Pose wall_5;
-//    wall_5.position.x = m_env_dim_x/5+ obstacle_offset_x_dir;
+//    wall_5.position.x = (m_env_dim_x[1]-m_env_dim_x[0])/5+ obstacle_offset_x_dir;
 //    wall_5.position.y = 1.5 * block_length + 1.5 * width_tunnel_passage;
 //    wall_5.position.z = wall_height/2.0;
 //    wall_5.orientation.w = 1.0;
@@ -1159,7 +1165,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
 //    //Center Top Wall
 //    geometry_msgs::Pose wall_6;
-//    wall_6.position.x = m_env_dim_x/5+ obstacle_offset_x_dir;
+//    wall_6.position.x = (m_env_dim_x[1]-m_env_dim_x[0])/5+ obstacle_offset_x_dir;
 //    wall_6.position.y = 0.5 * block_length + 0.5 * width_tunnel_passage;
 //    wall_6.position.z = wall_height/2.0;
 //    wall_6.orientation.w = 1.0;
@@ -1172,7 +1178,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
 //    //Center Lower Wall
 //    geometry_msgs::Pose wall_7;
-//    wall_7.position.x = m_env_dim_x/5+ obstacle_offset_x_dir;
+//    wall_7.position.x = (m_env_dim_x[1]-m_env_dim_x[0])/5+ obstacle_offset_x_dir;
 //    wall_7.position.y = -0.5 * block_length - 0.5 * width_tunnel_passage;
 //    wall_7.position.z = wall_height/2.0;
 //    wall_7.orientation.w = 1.0;
@@ -1185,7 +1191,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
 
 //    //Bottom Wall
 //    geometry_msgs::Pose wall_8;
-//    wall_8.position.x = m_env_dim_x/5+ obstacle_offset_x_dir;
+//    wall_8.position.x = (m_env_dim_x[1]-m_env_dim_x[0])/5+ obstacle_offset_x_dir;
 //    wall_8.position.y = -1.5 * block_length - 1.5 * width_tunnel_passage;
 //    wall_8.position.z = wall_height/2.0;
 //    wall_8.orientation.w = 1.0;
@@ -1202,7 +1208,7 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
     double wall_length_x = 3.5;
 
     geometry_msgs::Pose pose1;
-    pose1.position.x = m_env_dim_x/2.0 - wall_length_x/2.0;
+    pose1.position.x = m_env_dim_x[1] - wall_length_x/2.0;
     pose1.position.y = -1.4 - wall_thickness/2.0;
     pose1.position.z = wall_height/2.0;
     pose1.orientation.w = 1.0;
@@ -1216,8 +1222,8 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
     double wall_length_y = 6.5;
 
     geometry_msgs::Pose pose2;
-    pose2.position.x = m_env_dim_x/2.0 - 2.0 - wall_thickness/2.0;
-    pose2.position.y = -m_env_dim_y/2.0  + wall_length_y/2.0;
+    pose2.position.x = m_env_dim_x[1] - 2.0 - wall_thickness/2.0;
+    pose2.position.y = m_env_dim_y[0]  + wall_length_y/2.0;
     pose2.position.z = 0.5;
     pose2.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive_2;
@@ -1228,8 +1234,8 @@ void PlanningWorldBuilder::insertGlassDeliveryWorld(double tunnel_width,double t
     primitive_2.dimensions[2] = 1.0; //Z dim
 
     geometry_msgs::Pose pose3;
-    pose3.position.x = m_env_dim_x/2.0 - 1.0;
-    pose3.position.y = -m_env_dim_y/2.0  + (wall_length_y-1.0)/2.0;
+    pose3.position.x = m_env_dim_x[1] - 1.0;
+    pose3.position.y = m_env_dim_y[0]  + (wall_length_y-1.0)/2.0;
     pose3.position.z = 0.5;
     pose3.orientation.w = 1.0;
     shape_msgs::SolidPrimitive primitive_3;
@@ -1301,7 +1307,7 @@ void PlanningWorldBuilder::insertParkingSlot(double narrow_passage_offset, doubl
     //Wall width and length
     double wall_width = wall_thickness;
     double wall_height = 0.6;
-    double wall_length = m_env_dim_y/4.0;
+    double wall_length = (m_env_dim_y[1] - m_env_dim_y[0])/4.0;
 
     //Free Space between each wall (in y-direction)
     //double free_space_width = (m_env_dim_y - 2*wall_length) / 3.0;
@@ -1346,7 +1352,7 @@ void PlanningWorldBuilder::insertParkingSlot(double narrow_passage_offset, doubl
     double wall_length_parking_slot = 2.0;
 
     geometry_msgs::Pose pose3;
-    pose3.position.x = m_env_dim_x/2.0 - (wall_length_parking_slot + wall_thickness_parking_slot)/2.0;
+    pose3.position.x = m_env_dim_x[1] - (wall_length_parking_slot + wall_thickness_parking_slot)/2.0;
     pose3.position.y = -4.0 - wall_thickness_parking_slot/2.0;
     pose3.position.z = wall_height/2.0;
     pose3.orientation.w = 1.0;
@@ -1358,7 +1364,7 @@ void PlanningWorldBuilder::insertParkingSlot(double narrow_passage_offset, doubl
     primitive3.dimensions[2] = wall_height; //Z dim
 
     geometry_msgs::Pose pose4;
-    pose4.position.x = m_env_dim_x/2.0 - wall_length_parking_slot - wall_thickness_parking_slot/2.0;
+    pose4.position.x = m_env_dim_x[1] - wall_length_parking_slot - wall_thickness_parking_slot/2.0;
     pose4.position.y = -4.0 + wall_length_parking_slot/2.0;
     pose4.position.z = wall_height/2.0;
     pose4.orientation.w = 1.0;
@@ -1371,7 +1377,7 @@ void PlanningWorldBuilder::insertParkingSlot(double narrow_passage_offset, doubl
 
 
     geometry_msgs::Pose pose5;
-    pose5.position.x = -m_env_dim_x/2.0 + (wall_length_parking_slot + wall_thickness_parking_slot)/2.0;
+    pose5.position.x = m_env_dim_x[0] + (wall_length_parking_slot + wall_thickness_parking_slot)/2.0;
     pose5.position.y = 4.5 - wall_thickness_parking_slot/2.0;
     pose5.position.z = wall_height/2.0;
     pose5.orientation.w = 1.0;
@@ -1383,7 +1389,7 @@ void PlanningWorldBuilder::insertParkingSlot(double narrow_passage_offset, doubl
     primitive5.dimensions[2] = wall_height; //Z dim
 
     geometry_msgs::Pose pose6;
-    pose6.position.x = -m_env_dim_x/2.0 + wall_length_parking_slot + wall_thickness_parking_slot/2.0;
+    pose6.position.x = m_env_dim_x[0] + wall_length_parking_slot + wall_thickness_parking_slot/2.0;
     pose6.position.y = 2.0 + wall_length_parking_slot/2.0;
     pose6.position.z = wall_height/2.0;
     pose6.orientation.w = 1.0;
@@ -1847,7 +1853,7 @@ void PlanningWorldBuilder::detachObjectfromEndeffector(moveit_msgs::AttachedColl
 
 
 //Get the size of the environment
-void PlanningWorldBuilder::getEnvironmentDimensions(double& dim_x,double& dim_y)
+void PlanningWorldBuilder::getEnvironmentDimensions(vector<double>& dim_x,vector<double>& dim_y)
 {
     //Get environemnt size (x,y dimension)
     dim_x = m_env_dim_x;

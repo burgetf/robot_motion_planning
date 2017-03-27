@@ -1,9 +1,0 @@
-#
-# simInt simSetObjectPosition(simInt objectHandle,simInt relativeToObjectHandle,simFloat* pos)
-# simInt simSetObjectQuaternion(simInt objectHandle,simInt relativeToObjectHandle,simFloat* quat)
-
-int32[] handle
-int32[] relativeToObjectHandle
-float64[] position #(x,y position of base + orientation of base (z-axis) + lbr joint positions)
----
-int32 result

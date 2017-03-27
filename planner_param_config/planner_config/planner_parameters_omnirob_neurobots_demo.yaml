@@ -8,9 +8,12 @@ zeros:
 
 #-----  General Parameters
 near_threshold_control: 0.5         #Near threshold for control-based motion planning
-near_threshold_interpolation: 4.0   #Near threshold for c-space motion planning 
+near_threshold_interpolation: 1.5   #Near threshold for c-space motion planning 
 num_traj_segments_interp: 20        #Number of intermediate joint configurations used for collision checking
 max_near_nodes: 20                  #Maximum number of nodes considered in "choose_best_parent" and "rewireTree"
+max_planning_time: 30.0             #Maximum time available for planning (in sec)
+path_optimality_treshold: 3.0       #Treshold on the total path cost (for stopping planning before planning_time has been reached)
+single_extend_step: true            #Decides whether single or multiple steps are performed towards a random config
 
 #------ Collision Checking
 collision_check_extend_step_factor: 0.3 #Step width for edge configurations collision checking

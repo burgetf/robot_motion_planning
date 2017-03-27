@@ -22,9 +22,12 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
     
     //Read package path from parameter server
-    string terminal_configs_path;
-    nh.param("terminal_configs_path", terminal_configs_path, std::string("/home/burgetf/catkin_ws/src/robot_motion_planning/planning_scenarios/Start_Goal_Configurations"));
+    //string terminal_configs_path;
+    //nh.param("terminal_configs_path", terminal_configs_path, std::string("/home/burgetf/catkin_ws/src/robot_motion_planning/planning_scenarios/Start_Goal_Configurations"));
 
+    //Get package path of "planning_scenarios"
+    string terminal_configs_path;
+    terminal_configs_path = ros::package::getPath("planning_scenarios");
     
     //Set planning group
     //string planning_group = "omnirob_lbr_sdh";
@@ -60,8 +63,12 @@ int main(int argc, char** argv)
     //Load Planning World
     planning_world::PlanningWorldBuilder world_builder("robot_description",PLANNING_GROUP);
     //Enter Environment Borders
-    double env_size_x = 20.0;
-    double env_size_y = 20.0;
+    vector<double> env_size_x(2);
+    env_size_x[0] = -10.0;
+    env_size_x[1] = 10.0;
+    vector<double> env_size_y(2);
+    env_size_y[0] = -10.0;
+    env_size_y[1] = 10.0;
     double env_size_z = 2.0;
     world_builder.insertEnvironmentBorders(env_size_x,env_size_y,env_size_z);
 
@@ -91,19 +98,19 @@ int main(int argc, char** argv)
     constraint_vec_goal_pose[5] = 1; //RotZ
     //Permitted displacement for ee coordinates w.r.t desired target frame
     vector<pair<double,double> > target_coordinate_dev(6);
-    target_coordinate_dev[0].first = -0.005;    //negative X deviation [m]
-    target_coordinate_dev[0].second = 0.005;    //positive X deviation
-    target_coordinate_dev[1].first = -0.005;    //negative Y deviation
-    target_coordinate_dev[1].second = 0.005;    //positive Y deviation
-    target_coordinate_dev[2].first = -0.005;    //negative Z deviation
-    target_coordinate_dev[2].second = 0.005;    //positive Z deviation
-    target_coordinate_dev[3].first = -0.05;     //negative Xrot deviation [rad]
-    target_coordinate_dev[3].second = 0.05;     //positive Xrot deviation
-    target_coordinate_dev[4].first = -0.05;     //negative Yrot deviation
-    target_coordinate_dev[4].second = 0.05;     //positive Yrot deviation
-    target_coordinate_dev[5].first = -0.05;     //negative Zrot deviation
-    target_coordinate_dev[5].second = 0.05;     //positive Zrot deviation
-    
+    target_coordinate_dev[0].first = -0.0005;    //negative X deviation [m]
+    target_coordinate_dev[0].second = 0.0005;    //positive X deviation
+    target_coordinate_dev[1].first = -0.0005;    //negative Y deviation
+    target_coordinate_dev[1].second = 0.0005;    //positive Y deviation
+    target_coordinate_dev[2].first = -0.0005;    //negative Z deviation
+    target_coordinate_dev[2].second = 0.0005;    //positive Z deviation
+    target_coordinate_dev[3].first = -0.0005;     //negative Xrot deviation [rad]
+    target_coordinate_dev[3].second = 0.0005;     //positive Xrot deviation
+    target_coordinate_dev[4].first = -0.0005;     //negative Yrot deviation
+    target_coordinate_dev[4].second = 0.0005;     //positive Yrot deviation
+    target_coordinate_dev[5].first = -0.0005;     //negative Zrot deviation
+    target_coordinate_dev[5].second = 0.0005;     //positive Zrot deviation
+
     
     //Dimension of attached_object
     vector<double> cart_dim(3);
@@ -161,8 +168,12 @@ int main(int argc, char** argv)
     else if (SCENARIO_NAME == "door")
     {
         //Enter Environment Borders
-        double env_size_x = 10.0;
-        double env_size_y = 10.0;
+        vector<double> env_size_x(2);
+        env_size_x[0] = -5.0;
+        env_size_x[1] = 5.0;
+        vector<double> env_size_y(2);
+        env_size_y[0] = -5.0;
+        env_size_y[1] = 5.0;
         double env_size_z = 2.0;
         world_builder.insertEnvironmentBorders(env_size_x,env_size_y,env_size_z);
 
@@ -213,8 +224,12 @@ int main(int argc, char** argv)
     else if (SCENARIO_NAME == "rack")
     {
         //Enter Environment Borders
-        double env_size_x = 10.0;
-        double env_size_y = 10.0;
+        vector<double> env_size_x(2);
+        env_size_x[0] = -10.0;
+        env_size_x[1] = 10.0;
+        vector<double> env_size_y(2);
+        env_size_y[0] = -10.0;
+        env_size_y[1] = 10.0;
         double env_size_z = 2.0;
         world_builder.insertEnvironmentBorders(env_size_x,env_size_y,env_size_z);
 
@@ -656,7 +671,7 @@ int main(int argc, char** argv)
     {
         //Insert Narrow Corridor Scenario
 		double corridor_width = 2.0;
-		world_builder.insertNarrowCorridor(corridor_width, 0.2);
+        world_builder.insertNarrowCorridor(corridor_width, 0.2);
 		
         if(PLANNING_GROUP == "omnirob_lbr_sdh")
         {

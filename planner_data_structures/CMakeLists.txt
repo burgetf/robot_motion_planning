@@ -121,6 +121,11 @@ include/planner_data_structures/data_structs.h
 ## Build ##
 ###########
 
+ADD_DEFINITIONS(
+    -std=c++11
+    -D__cplusplus=201103L #for eclipse
+)
+
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)

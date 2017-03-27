@@ -23,9 +23,12 @@ int main(int argc, char** argv)
     ros::NodeHandle nh;
 
     //Read package path from parameter server
-    string terminal_configs_path;
-    nh.param("terminal_configs_path", terminal_configs_path, std::string("/home/burgetf/catkin_ws/src/robot_motion_planning/planning_scenarios/Start_Goal_Configurations"));
+    //string terminal_configs_path;
+    //nh.param("terminal_configs_path", terminal_configs_path, std::string("/home/burgetf/catkin_ws/src/robot_motion_planning/planning_scenarios/Start_Goal_Configurations"));
 
+    //Get package path of "planning_scenarios"
+    string terminal_configs_path;
+    terminal_configs_path = ros::package::getPath("planning_scenarios");
     
     //Set planning group
     //string planning_group = "omnirob_lbr_sdh";
@@ -78,8 +81,12 @@ int main(int argc, char** argv)
     //Load Planning World
     planning_world::PlanningWorldBuilder world_builder("robot_description",PLANNING_GROUP);
     //Enter Environment Borders
-    double env_size_x = 10.0;
-    double env_size_y = 10.0;
+    vector<double> env_size_x(2);
+    env_size_x[0] = -10.0;
+    env_size_x[1] = 10.0;
+    vector<double> env_size_y(2);
+    env_size_y[0] = -10.0;
+    env_size_y[1] = 10.0;
     double env_size_z = 2.0;
     world_builder.insertEnvironmentBorders(env_size_x,env_size_y,env_size_z);
 
@@ -248,7 +255,8 @@ int main(int argc, char** argv)
         uni_planner.init_planner(file_path_start_goal_config, 1);
 
         //Activate the constraint
-        uni_planner.setFixedTaskFrame(constraint_vector, permitted_coordinate_dev, hinge_frame);
+        //uni_planner.setFixedTaskFrame(constraint_vector, permitted_coordinate_dev, hinge_frame);
+        uni_planner.setTaskFrameConstraints(constraint_vector,permitted_coordinate_dev,true,true, hinge_frame);
 
         //Set edge costs
         uni_planner.setEdgeCostWeights(edge_cost_weights);
@@ -260,7 +268,8 @@ int main(int argc, char** argv)
         bi_planner.init_planner(file_path_start_goal_config, 1);
 
         //Activate the constraint
-        bi_planner.setFixedTaskFrame(constraint_vector, permitted_coordinate_dev, hinge_frame);
+        //bi_planner.setFixedTaskFrame(constraint_vector, permitted_coordinate_dev, hinge_frame);
+        bi_planner.setTaskFrameConstraints(constraint_vector,permitted_coordinate_dev,true,true, hinge_frame);
 
         //Set edge costs
         bi_planner.setEdgeCostWeights(edge_cost_weights);
@@ -284,7 +293,7 @@ int main(int argc, char** argv)
             success = uni_planner.run_planner(1, FLAG_ITERATIONS_OR_TIME, MAX_ITERATIONS_TIME, RVIZ_SHOW_TREE, 0.0, run);
 
             //Reset planner data
-            uni_planner.reset_planner();
+            uni_planner.reset_planner_only();
         }
         else if (search_direction == bi)
         {
@@ -293,7 +302,7 @@ int main(int argc, char** argv)
             success = bi_planner.run_planner(1, FLAG_ITERATIONS_OR_TIME, MAX_ITERATIONS_TIME, RVIZ_SHOW_TREE, 0.0, run);
 
             //Reset planner data
-            bi_planner.reset_planner();
+            bi_planner.reset_planner_only();
         }
         else
             ROS_ERROR("Unknown Planner Type!!!");

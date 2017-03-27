@@ -1,7 +1,0 @@
-#
-# simInt simReadCollision(simInt collisionObjectHandle)
-#
-
-int32 handle
----
-int32 collisionState

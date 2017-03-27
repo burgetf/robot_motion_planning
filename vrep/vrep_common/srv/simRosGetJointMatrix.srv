@@ -1,8 +1,0 @@
-#
-# simInt simGetJointMatrix(simInt objectHandle,simFloat* matrix)
-#
-
-int32 handle
----
-int32 result
-geometry_msgs/TransformStamped transform

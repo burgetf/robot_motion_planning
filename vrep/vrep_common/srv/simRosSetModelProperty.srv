@@ -1,8 +1,0 @@
-#
-# simInt simSetModelProperty(simInt objectHandle,simInt prop)
-#
-
-int32 handle
-int32 propertyValue
----
-int32 result

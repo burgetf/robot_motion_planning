@@ -29,8 +29,12 @@ int main(int argc, char** argv)
     //Load Planning World
     planning_world::PlanningWorldBuilder world_builder("robot_description", planning_group);
     //Enter Environment Borders
-    double env_size_x = 20.0;
-    double env_size_y = 20.0;
+    vector<double> env_size_x(2);
+    env_size_x[0] = -10.0;
+    env_size_x[1] = 10.0;
+    vector<double> env_size_y(2);
+    env_size_y[0] = -10.0;
+    env_size_y[1] = 10.0;
     double env_size_z = 0.6;
     world_builder.insertEnvironmentBorders(env_size_x,env_size_y,env_size_z);
 
@@ -176,7 +180,7 @@ int main(int argc, char** argv)
 
 
 
-    //Global Frame (top view)
+    //Global Frame (top view) -> Shows end-effector in base_link frame
     //       ^ Y
     //       |
     //       | f
@@ -266,11 +270,10 @@ int main(int argc, char** argv)
     permitted_coordinate_dev[5].first = 0.0;    //negative Zrot deviation
     permitted_coordinate_dev[5].second = 0.0;   //positive Zrot deviation
     //Activate the constraint
-    // -> Syntax: planner.setParameterizedTaskFrame(constraint_vector, permitted_coordinate_dev, bool task_pos_global, bool task_orient_global);
+    // -> Syntax: planner.setTaskFrameConstraints(constraint_vector,permitted_coordinate_dev,task_pos_global,task_orient_global);
     // bool task_pos_global -> indicates whether task frame position is expressed w.r.t near node ee pos or always w.r.t start frame ee pos
     // bool task_orient_global -> indicates whether task frame orientation is expressed w.r.t near node ee orientation or always w.r.t start frame ee orientation
-    //planner.setParameterizedTaskFrame(constraint_vector, permitted_coordinate_dev, true, true);
-
+    //planner.setTaskFrameConstraints(constraint_vector,permitted_coordinate_dev,true,true);
 
     //Set edge cost variable weights (to apply motion preferences)
     vector<double> edge_cost_weights(3);

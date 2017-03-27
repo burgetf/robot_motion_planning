@@ -1,7 +1,0 @@
-#
-# simxInt simxSynchronous(simxChar enable)
-#
-
-uint8 enable
----
-int32 result

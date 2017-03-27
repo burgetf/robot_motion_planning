@@ -1,3 +1,0 @@
-std_msgs/Int32MultiArray handles
-std_msgs/UInt8MultiArray setModes
-std_msgs/Float32MultiArray values

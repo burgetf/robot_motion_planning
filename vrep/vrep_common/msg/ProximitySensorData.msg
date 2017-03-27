@@ -1,3 +1,0 @@
-geometry_msgs/Point32 detectedPoint
-std_msgs/Int32 detectedObject
-geometry_msgs/Point32 normalVector

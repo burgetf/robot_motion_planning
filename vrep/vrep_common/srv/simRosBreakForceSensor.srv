@@ -1,8 +1,0 @@
-#
-# simInt simBreakForceSensor(simInt objectHandle)
-#
-
-int32 objectHandle
----
-int32 result
-
