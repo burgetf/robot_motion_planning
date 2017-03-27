@@ -24,6 +24,8 @@ This repository contains an efficient sampling-based planning framework, called 
  - `planning_world_builder`: Set of predefined planning worlds (other worlds can be added)
  - `planning_scenarios`: Example Planning Tasks (uses the planning worlds defined in the package above
  - `planner_statistics`: Stores the statistical results of planning runs (runtime, solution path cost etc.)
+ - `planner_msgs`: Provides ROS service definitions for planning
+ - `planning_server`: Implementation of ROS services for planning
 
 ### Requirements
 
