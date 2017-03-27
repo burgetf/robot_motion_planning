@@ -137,23 +137,28 @@ Furhermore, a SRDF defining arbitrary kinematic chains later subject to planning
 Start a first launch file to set up a couple of things for planning as follows
 ```sh
 <launch>
-
-	<!-- Some paths required by the planner-->
-	<param name="package_path" value="$(find kuka_motion_control)" />
-	<param name="planner_package_path" value="$(find planner_statistics)" />
-	<!-- Path required when precomputed terminal configurations are used for planning -->
-	<param name="terminal_configs_path" value="$(find planning_scenarios)" />
 	
 	<!-- Publish world frame to which the robot will be connected to (for virtual joint in the SRDF)-->
 	<node pkg="tf" type="static_transform_publisher" name="world_frame_publisher" args="0 0 0 0 0 0 /world_frame /base_link 100"/>
 
-    <!-- Load URDF and SRDF -->
+	<!-- Load URDF and SRDF -->
 	<param name="robot_description" textfile="$(find omnirob_description)/urdf/omnirob_lbr_sdh2_extended_wo_pole.urdf" />
 	<param name="robot_description_semantic" textfile="$(find omnirob_description)/srdf/omnirob_lbr_sdh2_wo_pole.srdf" />
 
 	<!-- Joint and Robot State Publisher for simulated robot -->
 	<node name="joint_state_publisher" pkg="joint_state_publisher" type="joint_state_publisher" />
 	<node name="robot_state_publisher" pkg="robot_state_publisher" type="state_publisher" />
+
+</launch>
+```
+set some parameters required for planning on the parameter server
+```sh
+<launch>
+
+	<!-- Define Parameter storing the namespace of the robot (in case you used a namespace in the previous launch file) -->
+	<param name="ns_prefix_robot" value="" />  <!-- e.g. /omnirob_group/ -->
+	<!-- Define Parameter storing the name of the robot description parameter -->
+	<param name="robot_description_robot" value="robot_description" /> <!-- i.e. ns_prefix_robot + /robot_description -> e.g. /omnirob_group/robot_description -->
 	
 	<!-- Load a planner parameter configuration -->
 	<rosparam command="load" file="$(find planner_param_config)/planner_config/planner_parameters_omnirob.yaml"/>
