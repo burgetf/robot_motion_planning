@@ -104,6 +104,10 @@ private:
     //Planning Group
     std::string m_planning_group;
 
+    //Planner activation
+    bool m_uni_planner_active;
+    bool m_bi_planner_active;
+
     //Bidirectional and Unidirectional RRT
     boost::shared_ptr<birrt_star_motion_planning::BiRRTstarPlanner> m_bi_planner;
     boost::shared_ptr<rrt_star_motion_planning::RRTstarPlanner> m_uni_planner;

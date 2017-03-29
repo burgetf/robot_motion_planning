@@ -17,23 +17,36 @@ namespace planning_server
 {
 
 //Constructor
-PlanningControlCenter::PlanningControlCenter(): nh_("~")
+PlanningControlCenter::PlanningControlCenter(): nh_("~"), m_bi_planner(NULL), m_uni_planner(NULL)
 {
     //Read planning group name from parameter server
     nh_.param("planning_group", m_planning_group, std::string("omnirob_lbr_sdh"));
 
-    ROS_INFO_STREAM("Planning group for planning set to: " << m_planning_group);
+    //Read from parameter server which planner need to be activated
+    nh_.param("activate_unidirectional_planner", m_uni_planner_active, false);
+    nh_.param("activate_bidirectional_planner", m_bi_planner_active, true);
 
     //Generate planners
-    m_bi_planner = boost::shared_ptr<birrt_star_motion_planning::BiRRTstarPlanner>(new birrt_star_motion_planning::BiRRTstarPlanner(m_planning_group));
-    m_uni_planner = boost::shared_ptr<rrt_star_motion_planning::RRTstarPlanner>(new rrt_star_motion_planning::RRTstarPlanner(m_planning_group));
-
-    //Trajectory Execution
-    //m_trajectory_execution = boost::shared_ptr<trajectory_execution::MotionCommanderRVIZ>(new trajectory_execution::MotionCommanderRVIZ(m_planning_group));
+    if(m_uni_planner_active)
+    {
+        m_uni_planner = boost::shared_ptr<rrt_star_motion_planning::RRTstarPlanner>(new rrt_star_motion_planning::RRTstarPlanner(m_planning_group));
+        ROS_INFO_STREAM("Uni RRT* active");
+        ROS_INFO_STREAM("Planning group for unidirectional planning set to: " << m_planning_group);
+    }
+    if(m_bi_planner_active)
+    {
+        m_bi_planner = boost::shared_ptr<birrt_star_motion_planning::BiRRTstarPlanner>(new birrt_star_motion_planning::BiRRTstarPlanner(m_planning_group));
+        ROS_INFO_STREAM("Bi RRT* active");
+        ROS_INFO_STREAM("Planning group for bidirectional planning set to: " << m_planning_group);
+    }
+    else
+    {
+        ROS_INFO_STREAM("No planner active: activate uni or bidirectional planner via launch file!");
+    }
 
 
 	//messages
-	//m_databaseChange = nh.advertise<database_msgs::database_change>("database_change", 5);
+    //m_databaseChange = nh.advertise<database_msgs::database_change>("database_change", 5);
 }
 
 //Destructor
@@ -60,13 +73,13 @@ bool PlanningControlCenter::generate_start_goal_config(planner_msgs::generate_st
         //Deviation for ee position
         if(c < 3)
         {
-            target_coordinate_dev_local[c].first = -0.0005;
-            target_coordinate_dev_local[c].second = 0.0005;
+            target_coordinate_dev_local[c].first = -0.0005;     //NOTE: target_coordinate_dev_local needs to be very low when planning is ...
+            target_coordinate_dev_local[c].second = 0.0005;     // ... subsequently performed with constraint EE task coordinates (Reason: Start EE pose used as task frame for sample projection)
         }
         //Deviation for ee orientation
         else{
-            target_coordinate_dev_local[c].first =  -0.0005;
-            target_coordinate_dev_local[c].second =  0.0005;
+            target_coordinate_dev_local[c].first =  -0.0005;    //NOTE: target_coordinate_dev_local needs to be very low when planning is ...
+            target_coordinate_dev_local[c].second =  0.0005;    // ... subsequently performed with constraint EE task coordinates (Reason: Start EE pose used as task frame for sample projection)
         }
     }
 
@@ -86,25 +99,19 @@ bool PlanningControlCenter::generate_start_goal_config(planner_msgs::generate_st
     }
 
 
-//    if(req.target_coordinate_dev.array2d_double.size() != 6 || req.constraint_vec_start_pose.size() != 6 || req.constraint_vec_goal_pose.size() != 6)
-//    {
-//        ROS_ERROR("Constraint vectors need to be 6-dimensional (pos+rot dev)");
-//        res.success = false;
-//        return false;
-//    }
-
-//    //Permitted displacement for ee coordinates w.r.t desired target frame
-//    //Convert message request into vector of pairs
-//    vector<pair<double,double> > target_coordinate_dev_local(6);
-//    for(int c = 0; c < target_coordinate_dev_local.size(); c++)
-//    {
-//        target_coordinate_dev_local[c].first = req.target_coordinate_dev.array2d_double[c].array1d_double[0];    //negative deviation [m or rad]
-//        target_coordinate_dev_local[c].second = req.target_coordinate_dev.array2d_double[c].array1d_double[1];   //positive deviation [m or rad]
-//    }
-
-
     //Generate start and goal config
-    vector<vector<double> > start_goal_config = m_bi_planner->generate_start_goal_config(req.start_ee_pose, constraint_vec_start_pose, req.goal_ee_pose, constraint_vec_goal_pose, target_coordinate_dev_local, req.show_motion);
+    vector<vector<double> > start_goal_config;
+    if(m_bi_planner)
+        start_goal_config = m_bi_planner->generate_start_goal_config(req.start_ee_pose, constraint_vec_start_pose, req.goal_ee_pose, constraint_vec_goal_pose, target_coordinate_dev_local, req.show_motion);
+    else if(m_uni_planner)
+        start_goal_config = m_uni_planner->generate_start_goal_config(req.start_ee_pose, constraint_vec_start_pose, req.goal_ee_pose, constraint_vec_goal_pose, target_coordinate_dev_local, req.show_motion);
+    else
+    {
+        ROS_ERROR("No Planner activated, check your launch file!");
+        //Return failure
+        res.success = false;
+        return false;
+    }
 
     //Store start and goal config in service response
     res.start_conf = start_goal_config[0];
@@ -128,8 +135,10 @@ bool PlanningControlCenter::set_planning_scene_info(planner_msgs::planning_scene
     }
 
     //Set information on planning scene
-    m_bi_planner->setPlanningSceneInfo(req.env_size_x, req.env_size_y, "motion_plan", req.show_environment_borders);
-    m_uni_planner->setPlanningSceneInfo(req.env_size_x, req.env_size_y, "motion_plan", req.show_environment_borders);
+    if(m_bi_planner)
+        m_bi_planner->setPlanningSceneInfo(req.env_size_x, req.env_size_y, "motion_plan", req.show_environment_borders);
+    if(m_uni_planner)
+        m_uni_planner->setPlanningSceneInfo(req.env_size_x, req.env_size_y, "motion_plan", req.show_environment_borders);
 
     //Planning Info set successfully
     res.ok = true;
@@ -141,8 +150,10 @@ bool PlanningControlCenter::reset_planner_to_default(planner_msgs::reset_planner
                               planner_msgs::reset_planner_to_default::Response& res)
 {
     //Reset planner to default configuration (as specified in the Constructor)
-    m_bi_planner->reset_planner_and_config();
-    m_uni_planner->reset_planner_and_config();
+    if(m_bi_planner)
+        m_bi_planner->reset_planner_and_config();
+    if(m_uni_planner)
+        m_uni_planner->reset_planner_and_config();
 
     //Return success
     res.reinitialized = true;
@@ -155,7 +166,18 @@ bool PlanningControlCenter::set_edge_cost_weights(planner_msgs::set_edge_costs::
                            planner_msgs::set_edge_costs::Response& res)
 {
     //Get the number of joints the planning group is composed of
-    int num_joints = m_bi_planner->getNumJointsPlanningGroup();
+    int num_joints;
+    if(m_bi_planner)
+        num_joints = m_bi_planner->getNumJointsPlanningGroup();
+    else if(m_uni_planner)
+        num_joints = m_uni_planner->getNumJointsPlanningGroup();
+    else
+    {
+        ROS_ERROR("No Planner activated, check your launch file!");
+        //Return failure
+        res.ok = false;
+        return false;
+    }
 
     if(req.edge_costs.size() != num_joints)
     {
@@ -166,8 +188,10 @@ bool PlanningControlCenter::set_edge_cost_weights(planner_msgs::set_edge_costs::
     else
     {
         //Set edge cost weights used for planning
-        m_bi_planner->setEdgeCostWeights(req.edge_costs);
-        m_uni_planner->setEdgeCostWeights(req.edge_costs);
+        if(m_bi_planner)
+            m_bi_planner->setEdgeCostWeights(req.edge_costs);
+        if(m_uni_planner)
+            m_uni_planner->setEdgeCostWeights(req.edge_costs);
 
         //Planning Info set successfully
         res.ok = true;
@@ -187,14 +211,14 @@ bool PlanningControlCenter::run_planner_start_goal_config(planner_msgs::run_plan
     //Initialization flag
     bool initialization_ok = true;
 
-    if(req.planner_type == "bi")
+    if(req.planner_type == "bi" && m_bi_planner)
     {
         //Reset planner data
         m_bi_planner->reset_planner_only();
         //Init planner with start and goal config
         initialization_ok = m_bi_planner->init_planner(req.start_config, req.goal_config,1); //1 = C-Space search space
     }
-    else if(req.planner_type == "uni")
+    else if(req.planner_type == "uni" && m_uni_planner)
     {
         //Reset planner data
         m_uni_planner->reset_planner_only();
@@ -203,7 +227,7 @@ bool PlanningControlCenter::run_planner_start_goal_config(planner_msgs::run_plan
     }
     else
     {
-        ROS_ERROR("Planner type not known! (Available options: 'bi' or 'uni')");
+        ROS_ERROR("Planner type not known or no planner activated in the launch file! (Available options: 'bi' or 'uni')");
         //Return failure
         res.success = false;
         return false;
@@ -233,13 +257,13 @@ bool PlanningControlCenter::run_planner_start_goal_config(planner_msgs::run_plan
         vector<vector<double> > eet;
 
         //If planning succeeded -> Store robot trajectories in service response
-        if(req.planner_type == "bi")
+        if(req.planner_type == "bi" && m_bi_planner)
         {
             //Get Trajectories
             jt =  m_bi_planner->getJointTrajectory();
             eet =  m_bi_planner->getEndeffectorTrajectory();
         }
-        if(req.planner_type == "uni")
+        if(req.planner_type == "uni" && m_uni_planner)
         {
             //Get Trajectories
             jt =  m_uni_planner->getJointTrajectory();
@@ -278,14 +302,14 @@ bool PlanningControlCenter::run_planner_configs_file(planner_msgs::run_planner_c
     //Initialization flag
     bool initialization_ok = true;
 
-    if(req.planner_type == "bi")
+    if(req.planner_type == "bi" && m_bi_planner)
     {
         //Reset planner data
         m_bi_planner->reset_planner_only();
         //Init planner with start and goal config from file
         initialization_ok = m_bi_planner->init_planner(file_path_start_goal_config, 1); //1 = C-Space search space
     }
-    else if(req.planner_type == "uni")
+    else if(req.planner_type == "uni" && m_uni_planner)
     {
         //Reset planner data
         m_uni_planner->reset_planner_only();
@@ -294,7 +318,7 @@ bool PlanningControlCenter::run_planner_configs_file(planner_msgs::run_planner_c
     }
     else
     {
-        ROS_ERROR("Planner type not known! (Available options: 'bi'' or 'uni')");
+        ROS_ERROR("Planner type not known or no planner activated in the launch file! (Available options: 'bi'' or 'uni')");
         //Return failure
         res.success = false;
         return false;
@@ -324,13 +348,13 @@ bool PlanningControlCenter::run_planner_configs_file(planner_msgs::run_planner_c
         vector<vector<double> > eet;
 
         //If planning succeeded -> Store robot trajectories in service response
-        if(req.planner_type == "bi")
+        if(req.planner_type == "bi" && m_bi_planner)
         {
             //Get Trajectories
             jt =  m_bi_planner->getJointTrajectory();
             eet =  m_bi_planner->getEndeffectorTrajectory();
         }
-        if(req.planner_type == "uni")
+        if(req.planner_type == "uni" && m_uni_planner)
         {
             //Get Trajectories
             jt =  m_uni_planner->getJointTrajectory();
@@ -370,13 +394,13 @@ bool PlanningControlCenter::run_planner_start_config_goal_pose(planner_msgs::run
         //Deviation for ee position
         if(c < 3)
         {
-            target_coordinate_dev_local[c].first = -0.005;
-            target_coordinate_dev_local[c].second = 0.005;
+            target_coordinate_dev_local[c].first = -0.0005;
+            target_coordinate_dev_local[c].second = 0.0005;
         }
         //Deviation for ee orientation
         else{
-            target_coordinate_dev_local[c].first =  -0.05;
-            target_coordinate_dev_local[c].second =  0.05;
+            target_coordinate_dev_local[c].first =  -0.0005;
+            target_coordinate_dev_local[c].second =  0.0005;
         }
     }
 
@@ -398,7 +422,7 @@ bool PlanningControlCenter::run_planner_start_config_goal_pose(planner_msgs::run
     //Initialization flag
     bool initialization_ok = true;
 
-    if(req.planner_type == "bi")
+    if(req.planner_type == "bi" && m_bi_planner)
     {
         //Reset planner data
         m_bi_planner->reset_planner_only();
@@ -407,7 +431,7 @@ bool PlanningControlCenter::run_planner_start_config_goal_pose(planner_msgs::run
         //Init planner with start and goal config
         initialization_ok = m_bi_planner->init_planner(req.start_config,goal_config,1); //1 = C-Space search space
     }
-    else if(req.planner_type == "uni")
+    else if(req.planner_type == "uni" && m_uni_planner)
     {
         //Reset planner data
         m_uni_planner->reset_planner_only();
@@ -418,7 +442,7 @@ bool PlanningControlCenter::run_planner_start_config_goal_pose(planner_msgs::run
     }
     else
     {
-        ROS_ERROR("Planner type not known! (Available options: 'bi' or 'uni')");
+        ROS_ERROR("Planner type not known or no planner activated in the launch file! (Available options: 'bi' or 'uni')");
         //Return failure
         res.success = false;
         return false;
@@ -449,13 +473,13 @@ bool PlanningControlCenter::run_planner_start_config_goal_pose(planner_msgs::run
         vector<vector<double> > eet;
 
         //If planning succeeded -> Store robot trajectories in service response
-        if(req.planner_type == "bi")
+        if(req.planner_type == "bi" && m_bi_planner)
         {
             //Get Trajectories
             jt =  m_bi_planner->getJointTrajectory();
             eet =  m_bi_planner->getEndeffectorTrajectory();
         }
-        if(req.planner_type == "uni")
+        if(req.planner_type == "uni" && m_uni_planner)
         {
             //Get Trajectories
             jt =  m_uni_planner->getJointTrajectory();
@@ -494,13 +518,13 @@ bool PlanningControlCenter::run_planner_poses(planner_msgs::run_planner_poses::R
         //Deviation for ee position
         if(c < 3)
         {
-            target_coordinate_dev_local[c].first = -0.01;
-            target_coordinate_dev_local[c].second = 0.01;
+            target_coordinate_dev_local[c].first = -0.0005;
+            target_coordinate_dev_local[c].second = 0.0005;
         }
         //Deviation for ee orientation
         else{
-            target_coordinate_dev_local[c].first =  -0.05;
-            target_coordinate_dev_local[c].second =  0.05;
+            target_coordinate_dev_local[c].first =  -0.0005;
+            target_coordinate_dev_local[c].second =  0.0005;
         }
     }
 
@@ -522,14 +546,14 @@ bool PlanningControlCenter::run_planner_poses(planner_msgs::run_planner_poses::R
     //Initialization flag
     bool initialization_ok = true;
 
-    if(req.planner_type == "bi")
+    if(req.planner_type == "bi" && m_bi_planner)
     {
         //Reset planner data
         m_bi_planner->reset_planner_only();
         //Init planner with start and goal ee pose
         initialization_ok = m_bi_planner->init_planner(req.start_ee_pose, constraint_vec_start_pose, req.goal_ee_pose, constraint_vec_goal_pose, target_coordinate_dev_local, 1); //1 = C-Space search space
     }
-    else if(req.planner_type == "uni")
+    else if(req.planner_type == "uni" && m_uni_planner)
     {
         //Reset planner data
         m_uni_planner->reset_planner_only();
@@ -538,7 +562,7 @@ bool PlanningControlCenter::run_planner_poses(planner_msgs::run_planner_poses::R
     }
     else
     {
-        ROS_ERROR("Planner type not known! (Available options: 'bi'' or 'uni')");
+        ROS_ERROR("Planner type not known or no planner activated in the launch file! (Available options: 'bi'' or 'uni')");
         //Return failure
         res.success = false;
         return false;
@@ -568,13 +592,13 @@ bool PlanningControlCenter::run_planner_poses(planner_msgs::run_planner_poses::R
         vector<vector<double> > eet;
 
         //If planning succeeded -> Store robot trajectories in service response
-        if(req.planner_type == "bi")
+        if(req.planner_type == "bi" && m_bi_planner)
         {
             //Get Trajectories
             jt =  m_bi_planner->getJointTrajectory();
             eet =  m_bi_planner->getEndeffectorTrajectory();
         }
-        if(req.planner_type == "uni")
+        if(req.planner_type == "uni" && m_uni_planner)
         {
             //Get Trajectories
             jt =  m_uni_planner->getJointTrajectory();
@@ -606,7 +630,20 @@ bool PlanningControlCenter::run_planner_map_goal_pose(planner_msgs::run_planner_
     tf::poseMsgToEigen (req.goal_pose, goal_pose);
 
     //Get Number of revolute joints in the planning group (independent of planner 'bi' or 'uni')
-    int num_rev_joints = m_bi_planner->getNumRevoluteJointsPlanningGroup();
+    int num_rev_joints;
+    if(m_bi_planner)
+        num_rev_joints = m_bi_planner->getNumRevoluteJointsPlanningGroup();
+    else if(m_uni_planner)
+        num_rev_joints = m_uni_planner->getNumRevoluteJointsPlanningGroup();
+    else
+    {
+        ROS_ERROR("No Planner available!");
+        //Return failure
+        res.success = false;
+        return false;
+    }
+
+
 
     //Initialize constraint ee coordinates and permitted target deviation
     vector<pair<double,double> > target_coordinate_dev_local(6);
@@ -618,13 +655,13 @@ bool PlanningControlCenter::run_planner_map_goal_pose(planner_msgs::run_planner_
         //Deviation for ee position
         if(c < 3)
         {
-            target_coordinate_dev_local[c].first = -0.01;
-            target_coordinate_dev_local[c].second = 0.01;
+            target_coordinate_dev_local[c].first = -0.0005;
+            target_coordinate_dev_local[c].second = 0.0005;
         }
         //Deviation for ee orientation
         else{
-            target_coordinate_dev_local[c].first =  -0.05;
-            target_coordinate_dev_local[c].second =  0.05;
+            target_coordinate_dev_local[c].first =  -0.0005;
+            target_coordinate_dev_local[c].second =  0.0005;
         }
     }
 
@@ -646,14 +683,14 @@ bool PlanningControlCenter::run_planner_map_goal_pose(planner_msgs::run_planner_
     //Initialization flag
     bool initialization_ok = true;
 
-    if(req.planner_type == "bi")
+    if(req.planner_type == "bi" && m_bi_planner)
     {
         //Reset planner data
         m_bi_planner->reset_planner_only();
         //Init planner for real robot
         initialization_ok = m_bi_planner->init_planner_map_goal_pose(goal_pose,constraint_vec_goal_pose, target_coordinate_dev_local, req.planner_type);
     }
-    else if(req.planner_type == "uni")
+    else if(req.planner_type == "uni" && m_uni_planner)
     {
         //Reset planner data
         m_uni_planner->reset_planner_only();
@@ -662,7 +699,7 @@ bool PlanningControlCenter::run_planner_map_goal_pose(planner_msgs::run_planner_
     }
     else
     {
-        ROS_ERROR("Planner type not known! (Available options: 'bi'' or 'uni')");
+        ROS_ERROR("Planner type not known or no planner activated in the launch file! (Available options: 'bi'' or 'uni')");
         //Return failure
         res.success = false;
         return false;
@@ -692,13 +729,13 @@ bool PlanningControlCenter::run_planner_map_goal_pose(planner_msgs::run_planner_
         vector<vector<double> > eet;
 
         //If planning succeeded -> Store robot trajectories in service response
-        if(req.planner_type == "bi")
+        if(req.planner_type == "bi" && m_bi_planner)
         {
             //Get Trajectories
             jt =  m_bi_planner->getJointTrajectory();
             eet =  m_bi_planner->getEndeffectorTrajectory();
         }
-        if(req.planner_type == "uni")
+        if(req.planner_type == "uni" && m_uni_planner)
         {
             //Get Trajectories
             jt =  m_uni_planner->getJointTrajectory();
@@ -728,14 +765,14 @@ bool PlanningControlCenter::run_planner_map_goal_config(planner_msgs::run_planne
     //Initialization flag
     bool initialization_ok = true;
 
-    if(req.planner_type == "bi")
+    if(req.planner_type == "bi" && m_bi_planner)
     {
         //Reset planner data
         m_bi_planner->reset_planner_only();
         //Init planner for real robot
         initialization_ok = m_bi_planner->init_planner_map_goal_config(req.goal_config, req.planner_type);
     }
-    else if(req.planner_type == "uni")
+    else if(req.planner_type == "uni" && m_uni_planner)
     {
         //Reset planner data
         m_uni_planner->reset_planner_only();
@@ -744,7 +781,7 @@ bool PlanningControlCenter::run_planner_map_goal_config(planner_msgs::run_planne
     }
     else
     {
-        ROS_ERROR("Planner type not known! (Available options: 'bi'' or 'uni')");
+        ROS_ERROR("Planner type not known or no planner activated in the launch file! (Available options: 'bi'' or 'uni')");
         //Return failure
         res.success = false;
         return false;
@@ -774,13 +811,13 @@ bool PlanningControlCenter::run_planner_map_goal_config(planner_msgs::run_planne
         vector<vector<double> > eet;
 
         //If planning succeeded -> Store robot trajectories in service response
-        if(req.planner_type == "bi")
+        if(req.planner_type == "bi" && m_bi_planner)
         {
             //Get Trajectories
             jt =  m_bi_planner->getJointTrajectory();
             eet =  m_bi_planner->getEndeffectorTrajectory();
         }
-        if(req.planner_type == "uni")
+        if(req.planner_type == "uni" && m_uni_planner)
         {
             //Get Trajectories
             jt =  m_uni_planner->getJointTrajectory();
@@ -813,7 +850,7 @@ bool PlanningControlCenter::solve_planning_problem(string planner_type, bool fla
     //Init planning result
     bool success = false;
 
-    if(planner_type == "bi")
+    if(planner_type == "bi" && m_bi_planner)
     {
         //Set tree optimization and informed sampling flags
         if(tree_optimization == false)
@@ -829,7 +866,7 @@ bool PlanningControlCenter::solve_planning_problem(string planner_type, bool fla
         //Run planner
         success = m_bi_planner->run_planner(1,flag_iter_or_time,max_iter_time,show_tree_vis,0.0,planner_run_number);
     }
-    else if(planner_type == "uni")
+    else if(planner_type == "uni" && m_uni_planner)
     {
         //Set tree optimization and informed sampling flags
         if(tree_optimization == false)
@@ -847,7 +884,7 @@ bool PlanningControlCenter::solve_planning_problem(string planner_type, bool fla
     }
     else
     {
-        ROS_ERROR("Planner type not known! (Available options: 'bi'' or 'uni')");
+        ROS_ERROR("Planner type not known or no planner activated in the launch file! (Available options: 'bi'' or 'uni')");
         success = false;
     }
 
@@ -856,29 +893,6 @@ bool PlanningControlCenter::solve_planning_problem(string planner_type, bool fla
 
 }
 
-
-//Trajectory Execution Service Callbacks
-//bool PlanningControlCenter::execute_motion_plan(planner_msgs::execute_motion_plan::Request& req,
-//                          planner_msgs::execute_motion_plan::Response& res)
-//{
-
-//    //Joint and End-effector Trajectory
-//    vector<vector<double> > jt(req.joint_trajectory.array2d_double.size());
-//    vector<vector<double> > eet(req.ee_trajectory.array2d_double.size());
-
-//    for(int c = 0; c < req.joint_trajectory.array2d_double.size(); c++)
-//    {
-//        jt[c] = req.joint_trajectory.array2d_double[c].array1d_double;    //c-th configuration of trajectory
-//        eet[c] = req.ee_trajectory.array2d_double[c].array1d_double;    //c-th ee pose of trajectory
-//    }
-
-//    //Execute the Trajectory in RViz
-//    m_trajectory_execution->executeJointTrajectory(jt,eet);
-
-//    res.execution_success = true;
-
-//    return res.execution_success;
-//}
 
 
 

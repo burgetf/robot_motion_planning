@@ -33,6 +33,7 @@ class FeasibilityChecker
 {	
 	public:
     FeasibilityChecker(string robot_desciption_param, string planning_group, string ns_prefix = "");
+    FeasibilityChecker(boost::shared_ptr<kuka_motion_controller::KDLRobotModel> kdl_robot_model, string robot_desciption_param, string planning_group, string ns_prefix= "");
 	~FeasibilityChecker();
 	//~FeasibilityCheckerBase() {}
 	
@@ -103,6 +104,9 @@ class FeasibilityChecker
     
     //Perform a step from a node towards another node
     bool stepAlongEdge(Node start_node, Node &end_node, double extend_step_factor);
+
+    //Get the planning frame from the SRDF description
+    string getPlanningFrameFromSRDF(string robot_desciption_param);
 		
 
 };

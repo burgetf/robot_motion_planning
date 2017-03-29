@@ -8,34 +8,8 @@ namespace state_feasibility_checker{
 
 FeasibilityChecker::FeasibilityChecker(string robot_desciption_param, string planning_group, string ns_prefix)
 {
-    //Get Name of robot description parameter
-    //string robot_desciption_param_name;
-    //nh_.param(robot_desciption_param, robot_desciption_param_name, string("robot_description"));
-
     //Check the planning frame (from virtual joint in srdf)
-    robot_model_loader::RobotModelLoader robot_model_loader(robot_desciption_param,false);
-    robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
-    //Get SRDF data for robot
-    const boost::shared_ptr< const srdf::Model > &srdf_robot = kinematic_model->getSRDF();
-    const std::vector< srdf::Model::VirtualJoint > &virtual_joint = srdf_robot->getVirtualJoints();
-    m_planning_frame =  "/" + virtual_joint[0].parent_frame_;
-
-//    cout<<"Here"<<endl;
-//    vector<pair<string,string> > disabled_collisions = srdf_robot->getDisabledCollisions();
-//    for(int i = 0 ; i < disabled_collisions.size(); i++)
-//            cout<<disabled_collisions[i].first<<" "<<disabled_collisions[i].second<<endl;
-
-//    cout<<"There"<<endl;
-
-//    int t;
-//    cin>>t;
-
-
-    //Check the planning frame (from virtual joint in srdf)
-    //moveit::planning_interface::MoveGroup::Options opt(planning_group, robot_desciption_param);
-    //moveit::planning_interface::MoveGroup group(opt);
-    //m_planning_frame = group.getPlanningFrame().c_str();
-
+    m_planning_frame = getPlanningFrameFromSRDF(robot_desciption_param);
 
 	//Planning Scene Monitor (required for collision checks)
     m_planning_scene_monitor =  boost::make_shared<planning_scene_monitor::PlanningSceneMonitor>(robot_desciption_param);
@@ -45,15 +19,13 @@ FeasibilityChecker::FeasibilityChecker(string robot_desciption_param, string pla
 
     //Get topic prefix in constructor argument list -> to set topic names e.g. "robotino_group/planning_scene"
     string planning_scene_ns = ns_prefix + "planning_scene";
-    string joint_states_ns = ns_prefix + "joint_states";
-    string attached_collision_object_ns = ns_prefix + "attached_collision_object";
-
-    string collision_object_ns = ns_prefix + "collision_object";
-    string planning_scene_world_ns = ns_prefix + "planning_scene_world";
-
     string planning_scene_service_ns = ns_prefix + "get_planning_scene";
-
     string endeffector_trajectory_ns = ns_prefix + "endeffector_trajectory";
+
+    //string joint_states_ns = ns_prefix + "joint_states";
+    //string attached_collision_object_ns = ns_prefix + "attached_collision_object";
+    //string collision_object_ns = ns_prefix + "collision_object";
+    //string planning_scene_world_ns = ns_prefix + "planning_scene_world";
 
     //m_planning_scene_monitor->startSceneMonitor(planning_scene_ns);
     //m_planning_scene_monitor->startStateMonitor(joint_states_ns, attached_collision_object_ns);
@@ -91,11 +63,118 @@ FeasibilityChecker::FeasibilityChecker(string robot_desciption_param, string pla
 
 }
 
+
+FeasibilityChecker::FeasibilityChecker(boost::shared_ptr<kuka_motion_controller::KDLRobotModel> kdl_robot_model, string robot_desciption_param, string planning_group, string ns_prefix)
+{
+
+    //Check the planning frame (from virtual joint in srdf)
+    m_planning_frame = getPlanningFrameFromSRDF(robot_desciption_param);
+
+    //Planning Scene Monitor (required for collision checks)
+    m_planning_scene_monitor =  boost::make_shared<planning_scene_monitor::PlanningSceneMonitor>(robot_desciption_param);
+
+    //Namespace prefix for robot
+    m_ns_prefix_robot = ns_prefix;
+
+    //Get topic prefix in constructor argument list -> to set topic names e.g. "robotino_group/planning_scene"
+    string planning_scene_service_ns = ns_prefix + "get_planning_scene";
+
+    //string planning_scene_ns = ns_prefix + "planning_scene";
+    //string joint_states_ns = ns_prefix + "joint_states";
+    //string attached_collision_object_ns = ns_prefix + "attached_collision_object";
+    //string collision_object_ns = ns_prefix + "collision_object";
+    //string planning_scene_world_ns = ns_prefix + "planning_scene_world";
+    //string endeffector_trajectory_ns = ns_prefix + "endeffector_trajectory";
+
+    //m_planning_scene_monitor->startSceneMonitor(planning_scene_ns);
+    //m_planning_scene_monitor->startStateMonitor(joint_states_ns, attached_collision_object_ns);
+    //m_planning_scene_monitor->startWorldGeometryMonitor(collision_object_ns,planning_scene_world_ns, false);
+
+
+    //Set planning Group
+    m_planning_group = planning_group;
+
+    //Name of Planning Scene Service;
+    m_planning_scene_service = planning_scene_service_ns;
+
+    //Create Robot model
+    m_KDLRobotModel = kdl_robot_model;
+
+    //Get Kinematic Chain of manipulator
+    m_manipulator_chain = m_KDLRobotModel->getCompleteArmChain();
+
+    //Get the joint names
+    m_joint_names = m_KDLRobotModel->getJointNames();
+
+    //Number of joints
+    m_num_joints = m_KDLRobotModel->getNumJoints();
+    m_num_joints_revolute = m_KDLRobotModel->getNumRevoluteJoints();
+    m_num_joints_prismatic = m_KDLRobotModel->getNumPrismaticJoints();
+
+    //Step width along an tree edge for collision checking (used only in "isEdgeValid(Edge)" function)
+    m_nh.param("collision_check_extend_step_factor", m_collision_check_extend_step_factor, 0.3);
+
+    //Step width along an tree edge for collision checking (used only in "isEdgeValid(Edge)" function)
+    //m_collision_check_extend_step_factor = 0.3;
+
+    //Flag indicating whether transform between map and base_link is available
+    m_transform_map_to_base_available = false;
+}
+
 FeasibilityChecker::~FeasibilityChecker()
 {
 	//Nothing to do yet
 }
 
+
+//Get the planning frame from the SRDF description
+string FeasibilityChecker::getPlanningFrameFromSRDF(string robot_desciption_param)
+{
+    //Planning frame
+    string planning_frame;
+
+    //Check the planning frame (from virtual joint in srdf)
+    boost::shared_ptr<srdf::Model> srdf_robot;
+    boost::shared_ptr<urdf::ModelInterface> urdf_robot;
+
+    //Get param content
+    std::string content;
+    if (!m_nh.getParam(robot_desciption_param, content))
+    {
+         ROS_ERROR("Robot model parameter empty '%s'?", robot_desciption_param.c_str());
+         return "none";
+    }
+
+    urdf::Model* umodel = new urdf::Model();
+    if (!umodel->initString(content))
+    {
+      ROS_ERROR("Unable to parse URDF from parameter '%s'", robot_desciption_param.c_str());
+      return "none";
+    }
+    urdf_robot.reset(umodel);
+
+    const std::string srdf_description(robot_desciption_param + "_semantic");
+    std::string scontent;
+    if (!m_nh.getParam(srdf_description, scontent))
+    {
+      ROS_ERROR("Robot semantic description not found. Did you forget to define or remap '%s'?", srdf_description.c_str());
+     return "none";
+   }
+
+    srdf_robot.reset(new srdf::Model());
+    if (!srdf_robot->initString(*urdf_robot, scontent))
+    {
+      ROS_ERROR("Unable to parse SRDF from parameter '%s'", srdf_description.c_str());
+      srdf_robot.reset();
+      return "none";
+    }
+
+    //Set planning frame class variable
+    const std::vector< srdf::Model::VirtualJoint > &virtual_joint = srdf_robot->getVirtualJoints();
+    planning_frame =  "/" + virtual_joint[0].parent_frame_;
+
+    return planning_frame;
+}
 
 
 //Set step width for collision checking along an tree edge (only used in "isEdgeValid(Edge tree_edge)")

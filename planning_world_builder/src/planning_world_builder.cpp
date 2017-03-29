@@ -41,6 +41,39 @@ PlanningWorldBuilder::PlanningWorldBuilder(string robot_desciption_param, string
 }
 
 
+//Constructor
+PlanningWorldBuilder::PlanningWorldBuilder(boost::shared_ptr<kuka_motion_controller::KDLRobotModel> kdl_robot_model, string ns_prefix)
+{
+
+    //Set up Planning Scene tpoics based on namespace
+    string planning_scene_ns = ns_prefix + "planning_scene";
+
+    //Publisher for collision objects
+    m_ps_obj_pub = m_nh.advertise<moveit_msgs::PlanningScene>(planning_scene_ns, 1);
+
+    //Get Robot model
+    m_KDLRobotModel = kdl_robot_model;
+
+    //Get Name of Base Link (required to set reference frame for obstacle visualization)
+    m_base_link_name = ns_prefix + m_KDLRobotModel->getBaseLinkName();
+
+    //Init number of walls
+    m_num_walls = 0;
+
+    //Environment size
+    m_env_dim_x.resize(2);
+    m_env_dim_x[0] = 0.0; //env dim in negative x dir
+    m_env_dim_x[1] = 0.0; //env dim in positive x dir
+    m_env_dim_y.resize(2);
+    m_env_dim_y[0] = 0.0; //env dim in negative y dir
+    m_env_dim_y[1] = 0.0; //env dim in positive y dir
+
+    //Set default Scene Name
+    m_scene_name = "none";
+
+}
+
+
 
 //Destructor
 PlanningWorldBuilder::~PlanningWorldBuilder()

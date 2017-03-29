@@ -1,7 +1,7 @@
 #include <birrt_star_algorithm/birrt_star.h>
 #include <moveit/planning_scene_interface/planning_scene_interface.h>
-//#include <ompl/util/RandomNumbers.h>
 #include <tf/transform_listener.h>
+#include <std_msgs/Float32.h>
 
 namespace birrt_star_motion_planning
 {
@@ -27,19 +27,23 @@ BiRRTstarPlanner::BiRRTstarPlanner(string planning_group)
     m_planning_group = planning_group;
 
 
-    //Get Planning Environment Size
-    //m_planning_world = boost::shared_ptr<planning_world::PlanningWorldBuilder>(new planning_world::PlanningWorldBuilder("robot_description", planning_group));
-    m_planning_world = boost::shared_ptr<planning_world::PlanningWorldBuilder>(new planning_world::PlanningWorldBuilder(robot_description_robot, planning_group,m_ns_prefix_robot));
-
     //Create Robot model
     //m_KDLRobotModel = boost::shared_ptr<kuka_motion_controller::KDLRobotModel>(new kuka_motion_controller::KDLRobotModel("robot_description", "planning_scene", "endeffector_trajectory", m_planning_group));
     m_KDLRobotModel = boost::shared_ptr<kuka_motion_controller::KDLRobotModel>(new kuka_motion_controller::KDLRobotModel(robot_description_robot, m_ns_prefix_robot + "planning_scene", m_ns_prefix_robot + "endeffector_trajectory", m_planning_group));
 
     ROS_INFO("KDL Robot Model initialized .....");
 
+    //Get Planning Environment Size
+    //m_planning_world = boost::shared_ptr<planning_world::PlanningWorldBuilder>(new planning_world::PlanningWorldBuilder("robot_description", planning_group));
+    //m_planning_world = boost::shared_ptr<planning_world::PlanningWorldBuilder>(new planning_world::PlanningWorldBuilder(robot_description_robot, planning_group,m_ns_prefix_robot));
+    m_planning_world = boost::shared_ptr<planning_world::PlanningWorldBuilder>(new planning_world::PlanningWorldBuilder(m_KDLRobotModel, m_ns_prefix_robot));
+
+    //ROS_INFO("Planning World initialized .....");
+
     //Create FeasibilityChecker
     //m_FeasibilityChecker = boost::shared_ptr<state_feasibility_checker::FeasibilityChecker>(new state_feasibility_checker::FeasibilityChecker("robot_description", m_planning_group));
-    m_FeasibilityChecker = boost::shared_ptr<state_feasibility_checker::FeasibilityChecker>(new state_feasibility_checker::FeasibilityChecker(robot_description_robot, m_planning_group, m_ns_prefix_robot));
+    //m_FeasibilityChecker = boost::shared_ptr<state_feasibility_checker::FeasibilityChecker>(new state_feasibility_checker::FeasibilityChecker(robot_description_robot, m_planning_group, m_ns_prefix_robot));
+    m_FeasibilityChecker = boost::shared_ptr<state_feasibility_checker::FeasibilityChecker>(new state_feasibility_checker::FeasibilityChecker(m_KDLRobotModel, robot_description_robot, m_planning_group, m_ns_prefix_robot));
 
     ROS_INFO("Feasibility Checker initialized .....");
 
@@ -49,7 +53,8 @@ BiRRTstarPlanner::BiRRTstarPlanner(string planning_group)
 
     //Create Robot Controller
     //m_RobotMotionController = boost::shared_ptr<kuka_motion_controller::RobotController>(new kuka_motion_controller::RobotController("robot_description", m_planning_group));
-    m_RobotMotionController = boost::shared_ptr<kuka_motion_controller::RobotController>(new kuka_motion_controller::RobotController(robot_description_robot, m_planning_group, m_ns_prefix_robot));
+    //m_RobotMotionController = boost::shared_ptr<kuka_motion_controller::RobotController>(new kuka_motion_controller::RobotController(robot_description_robot, m_planning_group, m_ns_prefix_robot));
+    m_RobotMotionController = boost::shared_ptr<kuka_motion_controller::RobotController>(new kuka_motion_controller::RobotController(m_KDLRobotModel, robot_description_robot, m_planning_group, m_ns_prefix_robot));
 
     ROS_INFO("Robot Controller initialized .....");
 
@@ -57,12 +62,7 @@ BiRRTstarPlanner::BiRRTstarPlanner(string planning_group)
     // ----- Get Planning Frame from srdf (if "map" planning for real robot / "base_link" planning in simulation) -----------
 
     //Check the planning frame (from virtual joint in srdf)
-    robot_model_loader::RobotModelLoader robot_model_loader(robot_description_robot,false);
-    robot_model::RobotModelPtr kinematic_model = robot_model_loader.getModel();
-    //Get SRDF data for robot
-    const boost::shared_ptr< const srdf::Model > &srdf_robot = kinematic_model->getSRDF();
-    const std::vector< srdf::Model::VirtualJoint > &virtual_joint = srdf_robot->getVirtualJoints();
-    m_planning_frame =  "/" + virtual_joint[0].parent_frame_;
+    m_planning_frame = getPlanningFrameFromSRDF(robot_description_robot);
 
 
     // ----- Init Controller Data  -----------
@@ -348,7 +348,11 @@ BiRRTstarPlanner::BiRRTstarPlanner(string planning_group)
     //Set Result of Motion Planning to failure (= 0)
     m_planner_success = 0;
 
-    ROS_INFO("Planner initialized .....");
+
+    //Set Publisher topic for planning progress (0 to 100%)
+    m_pub_planning_progress = m_nh.advertise<std_msgs::Float32>("rrt_planner_progress", 10);
+
+    ROS_INFO("Bi RRT* Planner initialized .....");
 
 }
 
@@ -1830,6 +1834,56 @@ bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, c
 }
 
 
+//Get the planning frame from the SRDF description
+string BiRRTstarPlanner::getPlanningFrameFromSRDF(string robot_desciption_param)
+{
+    //Planning frame
+    string planning_frame;
+
+    //Check the planning frame (from virtual joint in srdf)
+    boost::shared_ptr<srdf::Model> srdf_robot;
+    boost::shared_ptr<urdf::ModelInterface> urdf_robot;
+
+    //Get param content
+    std::string content;
+    if (!m_nh.getParam(robot_desciption_param, content))
+    {
+         ROS_ERROR("Robot model parameter empty '%s'?", robot_desciption_param.c_str());
+         return "none";
+    }
+
+    urdf::Model* umodel = new urdf::Model();
+    if (!umodel->initString(content))
+    {
+      ROS_ERROR("Unable to parse URDF from parameter '%s'", robot_desciption_param.c_str());
+      return "none";
+    }
+    urdf_robot.reset(umodel);
+
+    const std::string srdf_description(robot_desciption_param + "_semantic");
+    std::string scontent;
+    if (!m_nh.getParam(srdf_description, scontent))
+    {
+      ROS_ERROR("Robot semantic description not found. Did you forget to define or remap '%s'?", srdf_description.c_str());
+     return "none";
+   }
+
+    srdf_robot.reset(new srdf::Model());
+    if (!srdf_robot->initString(*urdf_robot, scontent))
+    {
+      ROS_ERROR("Unable to parse SRDF from parameter '%s'", srdf_description.c_str());
+      srdf_robot.reset();
+      return "none";
+    }
+
+    //Set planning frame class variable
+    const std::vector< srdf::Model::VirtualJoint > &virtual_joint = srdf_robot->getVirtualJoints();
+    planning_frame =  "/" + virtual_joint[0].parent_frame_;
+
+    return planning_frame;
+}
+
+
 bool BiRRTstarPlanner::run_planner(int search_space, bool flag_iter_or_time, double max_iter_time, bool show_tree_vis, double iter_sleep, int planner_run_number)
 {
 
@@ -1919,6 +1973,9 @@ bool BiRRTstarPlanner::run_planner(int search_space, bool flag_iter_or_time, dou
     Rrt_star_tree *tree_B;
     tree_B = &m_goal_tree;
 
+    //Planner progress message
+    std_msgs::Float32 msg_planner_progress;
+
 
     // ------------ Check whether Planning is needed by trying to directly connect the root nodes -----------
 
@@ -1928,7 +1985,13 @@ bool BiRRTstarPlanner::run_planner(int search_space, bool flag_iter_or_time, dou
     //Check whether solution path is available after connectGraphsInterpolation
     bool no_planning = m_solution_path_available;
     if(no_planning)
+    {
+        //Set planner progress to 100% indicating that planning is done (a straight line solution is found)
+        msg_planner_progress.data = 100.0;
+        m_pub_planning_progress.publish(msg_planner_progress);
+
         ROS_INFO_STREAM("No Planning required. Straight line connecting start and goal config in configuration space is valid.");
+    }
 
     // ------------ RRT* Planning -----------
 
@@ -2195,7 +2258,9 @@ bool BiRRTstarPlanner::run_planner(int search_space, bool flag_iter_or_time, dou
 
         double elapsed_time_percent = (planning_time_elapsed/m_max_planner_time)*100.0;
         double elapsed_time_percent_output = elapsed_time_percent < 100.0 ? elapsed_time_percent : 100.0;
-        ROS_INFO_STREAM("Time elapsed for planning (% of max. planning time): "<<elapsed_time_percent_output<<"%");
+        //ROS_INFO_STREAM("Time elapsed for planning (% of max. planning time): "<<elapsed_time_percent_output<<"%");
+        msg_planner_progress.data = elapsed_time_percent_output;
+        m_pub_planning_progress.publish(msg_planner_progress);
 
         //Store Evolution of the best solution cost
         vector<double> current_optimal_cost(5);
@@ -3162,20 +3227,26 @@ vector<double> BiRRTstarPlanner::findIKSolution(vector<double> goal_ee_pose, vec
         kuka_motion_controller::Status connector_state = m_RobotMotionController->run_VDLS_Control_Connector(1000, joint_trajectory,ee_trajectory,show_motion,show_motion);
 
         //Set last configuration of joint trajectory as goal config / ik solution
-        ik_solution = joint_trajectory[joint_trajectory.size()-1];
+        if(0 < joint_trajectory.size())
+            ik_solution = joint_trajectory[joint_trajectory.size()-1];
+        else
+        {
+            ROS_ERROR("Something went wrong in generating the IK solution with the VDLS_Control_Connector");
+        }
 
         //Perform collision check when pose has been reached
         if(connector_state == kuka_motion_controller::REACHED)
         {
+            cout<<"EE Pose reached ..."<<endl;
+
             //Check is it is collision free
-            if(m_FeasibilityChecker->isConfigValid(ik_solution))
+            if(m_FeasibilityChecker->isConfigValid(ik_solution,true))
             {
                 collision_free = true;
+                cout<<"... and valid!"<<endl;
             }
             else
-            {
-                cout<<"Terminal Configuration is in collision!"<<endl;
-            }
+                cout<<"... but invalid!"<<endl;
         }
 
     }
@@ -3232,21 +3303,26 @@ vector<double> BiRRTstarPlanner::findIKSolution(vector<double> goal_ee_pose, vec
         kuka_motion_controller::Status connector_state = m_RobotMotionController->run_VDLS_Control_Connector(1000, joint_trajectory,ee_trajectory,show_motion,show_motion);
 
         //Set last configuration of joint trajectory as goal config / ik solution
-        ik_solution = joint_trajectory[joint_trajectory.size()-1];
+        if(0 < joint_trajectory.size())
+            ik_solution = joint_trajectory[joint_trajectory.size()-1];
+        else
+        {
+            ROS_ERROR("Something went wrong in generating the IK solution with the VDLS_Control_Connector");
+        }
 
         //Perform collision check when pose has been reached
         if(connector_state == kuka_motion_controller::REACHED)
         {
-            cout<<"EE Pose reached ...."<<endl;
+            cout<<"EE Pose reached ..."<<endl;
 
             //Check is it is collision free
-            if(m_FeasibilityChecker->isConfigValid(ik_solution))
+            if(m_FeasibilityChecker->isConfigValid(ik_solution,true))
             {
                 collision_free = true;
-                cout<<"and valid!"<<endl;
+                cout<<"... and valid!"<<endl;
             }
             else
-                cout<<"but invalid!"<<endl;
+                cout<<"... but invalid!"<<endl;
         }
         else
         {

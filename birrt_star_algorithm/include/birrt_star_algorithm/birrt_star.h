@@ -116,6 +116,9 @@ class BiRRTstarPlanner //: public robot_interface_definition::RobotInterface
 
     // ----- Getters -----
 
+    //Get the planning frame from the SRDF description
+    string getPlanningFrameFromSRDF(string robot_desciption_param);
+
     //Get the planned joint trajectory
     vector<vector<double> > getJointTrajectory();
     //Get the planned endeffector trajectory
@@ -552,6 +555,12 @@ class BiRRTstarPlanner //: public robot_interface_definition::RobotInterface
 
     //Namespace prefix for robot
     string m_ns_prefix_robot;
+
+    // ++ Information Publisher ++
+
+    //Publisher for planning progress (0 to 100%)
+    ros::Publisher m_pub_planning_progress;
+
 
     // ++ Functions and Variables for consistency checks ++
 

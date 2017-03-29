@@ -4,19 +4,24 @@
  
   <!-- Launch file arguments -->
   <arg name="planning_group" default="omnirob_base"/>
+  <arg name="planning_config" default="planner_parameters_omnirob"/>
+  
+  <!-- Planners to activate -->
+  <arg name="start_uni_planner" default="false"/>
+  <arg name="start_bi_planner" default="true"/>
   
   <!-- Define Parameter storing the namespace of the omnirob robot -->
   <param name="ns_prefix_robot" value="" /> <!-- e.g. /omnirob_lbr/ -->
   <!-- Define Parameter storing the name of the robot description parameter -->
-  <param name="robot_description_robot" value="robot_description)" /> <!-- e.g. /omnirob_lbr/robot_description -->
-  
+  <param name="robot_description_robot" value="robot_description" /> <!-- e.g. /omnirob_lbr/robot_description --> 
   <!-- Load configuration file for planner -->
-  <arg name="planning_config" default="planner_parameters_omnirob"/>
   <rosparam command="load" file="$(find planner_param_config)/planner_config/$(arg planning_config).yaml"/>
   
   <!-- Start Planning Server Node -->
   <node name="planning_server" pkg="planning_server" type="planning_service_node" cwd="node" output="screen"><!--or output="screen" to print std/cout in terminal-->
-	<param name="planning_group" value="$(arg planning_group)" /> 
+	<param name="planning_group" value="$(arg planning_group)" />
+	<param name="activate_unidirectional_planner" value="$(arg start_uni_planner)" />
+	<param name="activate_bidirectional_planner" value="$(arg start_bi_planner)" />
   </node> 
   
 </launch>

@@ -19,6 +19,7 @@ class PlanningWorldBuilder
 {
 	public:
     PlanningWorldBuilder(string robot_desciption_param, string planning_group, string ns_prefix = "");
+    PlanningWorldBuilder(boost::shared_ptr<kuka_motion_controller::KDLRobotModel> kdl_robot_model, string ns_prefix= "");
     ~PlanningWorldBuilder();
 	
     //Insert Borders, i.e. walls confining the robot's workspace
