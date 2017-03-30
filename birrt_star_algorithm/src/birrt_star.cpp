@@ -38,7 +38,7 @@ BiRRTstarPlanner::BiRRTstarPlanner(string planning_group)
     //m_planning_world = boost::shared_ptr<planning_world::PlanningWorldBuilder>(new planning_world::PlanningWorldBuilder(robot_description_robot, planning_group,m_ns_prefix_robot));
     m_planning_world = boost::shared_ptr<planning_world::PlanningWorldBuilder>(new planning_world::PlanningWorldBuilder(m_KDLRobotModel, m_ns_prefix_robot));
 
-    //ROS_INFO("Planning World initialized .....");
+    ROS_INFO("Planning World initialized .....");
 
     //Create FeasibilityChecker
     //m_FeasibilityChecker = boost::shared_ptr<state_feasibility_checker::FeasibilityChecker>(new state_feasibility_checker::FeasibilityChecker("robot_description", m_planning_group));
@@ -390,6 +390,14 @@ bool BiRRTstarPlanner::init_planner(char *start_goal_config_file, int search_spa
     KDL::JntArray start_configuration = m_RobotMotionController->Vector_to_JntArray(start_conf);
     KDL::JntArray goal_configuration = m_RobotMotionController->Vector_to_JntArray(goal_conf);
 
+    //Initialize map to robot transform before performing collision checks
+    if(m_planning_frame == "/map")
+    {
+        if(!m_FeasibilityChecker->update_map_to_robot_transform())
+            ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
+    }
+
+
     //Check start and goal config for validity
     bool start_conf_valid = m_FeasibilityChecker->isConfigValid(start_configuration);
     bool goal_conf_valid = m_FeasibilityChecker->isConfigValid(goal_configuration);
@@ -602,9 +610,6 @@ bool BiRRTstarPlanner::init_planner(char *start_goal_config_file, int search_spa
             m_transform_map_to_base_available = false;
             return false;
         }
-
-        //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-        m_FeasibilityChecker->update_map_to_robot_transform();
     }
 
     //Everything went fine
@@ -626,6 +631,13 @@ bool BiRRTstarPlanner::init_planner(vector<double> start_conf, vector<double> go
     KDL::JntArray start_configuration = m_RobotMotionController->Vector_to_JntArray(start_conf);
     KDL::JntArray goal_configuration = m_RobotMotionController->Vector_to_JntArray(goal_conf);
 
+    //Initialize map to robot transform before performing collision checks
+    if(m_planning_frame == "/map")
+    {
+        if(!m_FeasibilityChecker->update_map_to_robot_transform())
+            ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
+    }
+
     //Check start and goal config for validity
     bool start_conf_valid = m_FeasibilityChecker->isConfigValid(start_configuration);
     bool goal_conf_valid = m_FeasibilityChecker->isConfigValid(goal_configuration);
@@ -840,8 +852,6 @@ bool BiRRTstarPlanner::init_planner(vector<double> start_conf, vector<double> go
             return false;
         }
 
-        //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-        m_FeasibilityChecker->update_map_to_robot_transform();
     }
 
     //Everything went fine
@@ -887,6 +897,12 @@ bool BiRRTstarPlanner::init_planner(vector<double> start_conf, vector<double> ee
     //Find endeffector pose for start configuration
     vector<double> ee_start_pose = computeEEPose(start_configuration);
 
+    //Initialize map to robot transform before performing collision checks
+    if(m_planning_frame == "/map")
+    {
+        if(!m_FeasibilityChecker->update_map_to_robot_transform())
+            ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
+    }
 
     //Check start and goal config for validity
     bool start_conf_valid = m_FeasibilityChecker->isConfigValid(start_configuration);
@@ -1096,9 +1112,6 @@ bool BiRRTstarPlanner::init_planner(vector<double> start_conf, vector<double> ee
             m_transform_map_to_base_available = false;
             return false;
         }
-
-        //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-        m_FeasibilityChecker->update_map_to_robot_transform();
     }
 
     //Everything went fine
@@ -1153,6 +1166,12 @@ bool BiRRTstarPlanner::init_planner(vector<double> ee_start_pose, vector<int> co
     //Find configuration for endeffector start pose
     vector<double> ik_sol_ee_start_pose = findIKSolution(start_ee_pose_quat_orient, constraint_vec_start_pose, coordinate_dev, ik_sol_ee_goal_pose, true);
 
+    //Initialize map to robot transform before performing collision checks
+    if(m_planning_frame == "/map")
+    {
+        if(!m_FeasibilityChecker->update_map_to_robot_transform())
+            ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
+    }
 
     //Check start and goal config for validity
     bool start_conf_valid = m_FeasibilityChecker->isConfigValid(ik_sol_ee_start_pose);
@@ -1351,9 +1370,6 @@ bool BiRRTstarPlanner::init_planner(vector<double> ee_start_pose, vector<int> co
             m_transform_map_to_base_available = false;
             return false;
         }
-
-        //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-        m_FeasibilityChecker->update_map_to_robot_transform();
     }
 
     //Everything went fine
@@ -1666,7 +1682,7 @@ bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, c
 
 
     //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-    m_FeasibilityChecker->update_map_to_robot_transform();
+    //m_FeasibilityChecker->update_map_to_robot_transform();
 
     return init_ok;
 
@@ -1764,11 +1780,10 @@ bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, c
             double z_dir = transform_base_to_goal.getRotation().getAxis().z();
             goal_conf[2] = z_dir > 0.0 ? goal_rot_base.getAngle() : -goal_rot_base.getAngle();
 
-            cout <<"Goal pose in base frame" << endl;
+            ROS_INFO_STREAM("Goal pose in base frame");
             //cout << goal_pose_base.matrix() << endl << endl;
-            cout <<goal_conf[0] << endl;
-            cout <<goal_conf[1] << endl;
-            cout <<goal_conf[2] << endl<<endl;
+            ROS_INFO_STREAM(goal_conf[0]<<"  "<<goal_conf[1]<<"  "<<goal_conf[2]);
+            
 
             //Check whether planning group includes only the revolute joint of the mobile base
             // -> If yes, check whether the base is already at the correct pose or planning is required
@@ -1820,15 +1835,16 @@ bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, c
 
     }
 
-
     //------------ PLANNER INITIALIZATION --------------
 
     //Initialize Planner
     bool init_ok = init_planner(start_conf,goal_conf,1);
     //Remark: Fails is start or goal config (start_conf_base,goal_conf_base) is invalid
 
+
     //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-    m_FeasibilityChecker->update_map_to_robot_transform();
+    //m_FeasibilityChecker->update_map_to_robot_transform();
+    
 
     return init_ok;
 }
@@ -2275,6 +2291,12 @@ bool BiRRTstarPlanner::run_planner(int search_space, bool flag_iter_or_time, dou
         if((m_cost_best_solution_path - m_start_tree.nodes[0].cost_h.total) < m_path_optimality_treshold)
         {
             ROS_INFO_STREAM("Solution Path within optimality treshold found, leaving planning loop ....");
+
+            //Publish planning progress 100%
+            msg_planner_progress.data = 100.0;
+            m_pub_planning_progress.publish(msg_planner_progress);
+
+            //Leave planning loop
             break;
         }
 

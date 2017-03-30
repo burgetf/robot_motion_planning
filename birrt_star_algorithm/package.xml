@@ -52,7 +52,6 @@
   <build_depend>std_msgs</build_depend>
   <!-- <build_depend>robot_interface_definition</build_depend> -->
   <build_depend>tf</build_depend>
-  <build_depend>rviz_visual_tools</build_depend>
 
   
   
@@ -70,7 +69,6 @@
   <run_depend>std_msgs</run_depend>
   <!-- <run_depend>robot_interface_definition</run_depend> -->
   <run_depend>tf</run_depend>
-  <run_depend>rviz_visual_tools</run_depend>
 
 
   <!-- The export tag contains other, unspecified, tags -->

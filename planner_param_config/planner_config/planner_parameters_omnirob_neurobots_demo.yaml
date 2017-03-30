@@ -19,7 +19,7 @@ single_extend_step: true            #Decides whether single or multiple steps ar
 collision_check_extend_step_factor: 0.3 #Step width for edge configurations collision checking
      
 #------ Unconstrained Motion Planning   
-unconstraint_extend_step_factor: 0.4  #Extend step width factor
+unconstraint_extend_step_factor: 0.5  #Extend step width factor
       
 #------ Constrained Motion Planning
 constraint_extend_step_factor: 0.4    #Extend step width factor

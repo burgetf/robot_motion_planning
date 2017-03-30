@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   #robot_interface_definition
   tf
-  rviz_visual_tools
 )
 
 #Find OpenMP Package

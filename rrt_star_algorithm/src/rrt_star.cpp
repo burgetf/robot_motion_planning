@@ -356,16 +356,37 @@ bool RRTstarPlanner::init_planner(char *start_goal_config_file, int search_space
     KDL::JntArray start_configuration = m_RobotMotionController->Vector_to_JntArray(start_conf);
     KDL::JntArray goal_configuration = m_RobotMotionController->Vector_to_JntArray(goal_conf);
 
+
+    //Initialize map to robot transform before performing collision checks
+    if(m_planning_frame == "/map")
+    {
+        if(!m_FeasibilityChecker->update_map_to_robot_transform())
+            ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
+    }
+
+    //Check start and goal config for validity
+    bool start_conf_valid = m_FeasibilityChecker->isConfigValid(start_configuration);
+    bool goal_conf_valid = m_FeasibilityChecker->isConfigValid(goal_configuration);
+    if(start_conf_valid == false){
+        ROS_ERROR("Start configuration is invalid!!!");
+        return false;
+    }else if (goal_conf_valid == false){
+        ROS_ERROR("Goal configuration is invalid!!!");
+        return false;
+    }else{
+        //Nothing to do
+    }
+
     //Find endeffector pose for start and goal configuration
     vector<double> ee_start_pose = computeEEPose(start_configuration);
     vector<double> ee_goal_pose = computeEEPose(goal_configuration);
 
     //Store orientation of start ee pose as orientation of task frame (i.e. task frame orientation set globally)
-    if(m_constraint_active)
-    {
+    //if(m_constraint_active)
+    //{
         //Set Task frame to pose of endeffector frame at start config
-        m_task_frame = m_KDLRobotModel->compute_FK_frame(m_manipulator_chain, start_configuration);
-    }
+    //    m_task_frame = m_KDLRobotModel->compute_FK_frame(m_manipulator_chain, start_configuration);
+    //}
 
 
 
@@ -550,9 +571,6 @@ bool RRTstarPlanner::init_planner(char *start_goal_config_file, int search_space
             m_transform_map_to_base_available = false;
             return false;
         }
-
-        //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-        m_FeasibilityChecker->update_map_to_robot_transform();
     }
 
     return true;
@@ -574,17 +592,37 @@ bool RRTstarPlanner::init_planner(vector<double> start_conf, vector<double> goal
     KDL::JntArray start_configuration = m_RobotMotionController->Vector_to_JntArray(start_conf);
     KDL::JntArray goal_configuration = m_RobotMotionController->Vector_to_JntArray(goal_conf);
 
+    //Initialize map to robot transform before performing collision checks
+    if(m_planning_frame == "/map")
+    {
+        if(!m_FeasibilityChecker->update_map_to_robot_transform())
+            ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
+    }
+
+    //Check start and goal config for validity
+    bool start_conf_valid = m_FeasibilityChecker->isConfigValid(start_configuration);
+    bool goal_conf_valid = m_FeasibilityChecker->isConfigValid(goal_configuration);
+    if(start_conf_valid == false){
+        ROS_ERROR("Start configuration is invalid!!!");
+        return false;
+    }else if (goal_conf_valid == false){
+        ROS_ERROR("Goal configuration is invalid!!!");
+        return false;
+    }else{
+        //Nothing to do
+    }
+
     //Find endeffector pose for start and goal configuration
     vector<double> ee_start_pose = computeEEPose(start_configuration);
     vector<double> ee_goal_pose = computeEEPose(goal_configuration);
 
 
     //Store orientation of start ee pose as orientation of task frame (i.e. task frame orientation set globally)
-    if(m_constraint_active)
-    {
+    //if(m_constraint_active)
+    //{
         //Set Task frame to pose of endeffector frame at start config
-        m_task_frame = m_KDLRobotModel->compute_FK_frame(m_manipulator_chain, start_configuration);
-    }
+    //    m_task_frame = m_KDLRobotModel->compute_FK_frame(m_manipulator_chain, start_configuration);
+    //}
 
 
 
@@ -769,9 +807,6 @@ bool RRTstarPlanner::init_planner(vector<double> start_conf, vector<double> goal
             m_transform_map_to_base_available = false;
             return false;
         }
-
-        //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-        m_FeasibilityChecker->update_map_to_robot_transform();
     }
 
     return true;
@@ -815,12 +850,32 @@ bool RRTstarPlanner::init_planner(vector<double> start_conf, vector<double> ee_g
     vector<double> ee_start_pose = computeEEPose(start_configuration);
 
 
-    //Store orientation of start ee pose as orientation of task frame (i.e. task frame orientation set globally)
-    if(m_constraint_active)
+    //Initialize map to robot transform before performing collision checks
+    if(m_planning_frame == "/map")
     {
-        //Set Task frame to pose of endeffector frame at start config
-        m_task_frame = m_KDLRobotModel->compute_FK_frame(m_manipulator_chain, start_configuration);
+        if(!m_FeasibilityChecker->update_map_to_robot_transform())
+            ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
     }
+
+    //Check start and goal config for validity
+    bool start_conf_valid = m_FeasibilityChecker->isConfigValid(start_configuration);
+    bool goal_conf_valid = m_FeasibilityChecker->isConfigValid(ik_sol_ee_goal_pose);
+    if(start_conf_valid == false){
+        ROS_ERROR("Start configuration is invalid!!!");
+        return false;
+    }else if (goal_conf_valid == false){
+        ROS_ERROR("Goal configuration is invalid!!!");
+        return false;
+    }else{
+        //Nothing to do
+    }
+
+    //Store orientation of start ee pose as orientation of task frame (i.e. task frame orientation set globally)
+    //if(m_constraint_active)
+    //{
+        //Set Task frame to pose of endeffector frame at start config
+    //    m_task_frame = m_KDLRobotModel->compute_FK_frame(m_manipulator_chain, start_configuration);
+    //}
 
 
 
@@ -1006,8 +1061,6 @@ bool RRTstarPlanner::init_planner(vector<double> start_conf, vector<double> ee_g
             return false;
         }
 
-        //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-        m_FeasibilityChecker->update_map_to_robot_transform();
     }
 
     return true;
@@ -1053,6 +1106,26 @@ bool RRTstarPlanner::init_planner(vector<double> ee_start_pose, vector<int> cons
     //Find configuration for endeffector start pose
     vector<double> ik_sol_ee_start_pose = findIKSolution(start_ee_pose_quat_orient, constraint_vec_start_pose, coordinate_dev, ik_sol_ee_goal_pose, true);
 
+
+    //Initialize map to robot transform before performing collision checks
+    if(m_planning_frame == "/map")
+    {
+        if(!m_FeasibilityChecker->update_map_to_robot_transform())
+            ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
+    }
+
+    //Check start and goal config for validity
+    bool start_conf_valid = m_FeasibilityChecker->isConfigValid(ik_sol_ee_start_pose);
+    bool goal_conf_valid = m_FeasibilityChecker->isConfigValid(ik_sol_ee_goal_pose);
+    if(start_conf_valid == false){
+        ROS_ERROR("Start configuration is invalid!!!");
+        return false;
+    }else if (goal_conf_valid == false){
+        ROS_ERROR("Goal configuration is invalid!!!");
+        return false;
+    }else{
+        //Nothing to do
+    }
 
     //Compute Heuristic for root node (either distance between start and goal config or between start and goal endeffector pose)
     //m_cost_theoretical_solution_path[0] -> total
@@ -1235,9 +1308,6 @@ bool RRTstarPlanner::init_planner(vector<double> ee_start_pose, vector<int> cons
             m_transform_map_to_base_available = false;
             return false;
         }
-
-        //------------ FEASIBILITY CHECKER INITIALIZATION --------------
-        m_FeasibilityChecker->update_map_to_robot_transform();
     }
 
     return true;
@@ -2067,7 +2137,13 @@ bool RRTstarPlanner::run_planner(int search_space, bool flag_iter_or_time, doubl
         //Stop when current solution path is close enough to theoretical optimal solution path (value stored in start and goal node)
         if((m_cost_best_solution_path - m_tree.nodes[1].cost_h.total) < m_path_optimality_treshold)
         {
-            cout<<"Optimal Path reached after iteration: "<<m_executed_planner_iter<<endl;
+            ROS_INFO_STREAM("Solution Path within optimality treshold found, leaving planning loop ....");
+
+            //Publish planning progress 100%
+            msg_planner_progress.data = 100.0;
+            m_pub_planning_progress.publish(msg_planner_progress);
+
+            //Leave planning loop
             break;
         }
 
