@@ -338,6 +338,9 @@ BiRRTstarPlanner::BiRRTstarPlanner(string planning_group)
     //Solution path publisher (for base trajectory)
     m_base_solution_path_pub = m_nh.advertise<visualization_msgs::Marker>("base_tree_solution_path", 100);
 
+    //Publisher for prismatic C-Space ellipse (informed subset for base)
+    m_base_ellipse_pub = m_nh.advertise<visualization_msgs::Marker>("base_ellipse", 100);
+
     //Subscriber to get current joint state from real lbr arm
     m_lbr_joint_state_sub = m_nh.subscribe(m_ns_prefix_robot + "joint_states", 1000, &BiRRTstarPlanner::callback_lbr_joint_states, this);
     //Flag indicating that lbr joint state is available
@@ -455,7 +458,6 @@ bool BiRRTstarPlanner::init_planner(char *start_goal_config_file, int search_spa
     //Add goal Node to the tree
     m_goal_tree.nodes.push_back(goal_node);
     m_goal_tree.num_nodes++;
-
 
     //Add sphere to visualize goal node
     visualization_msgs::Marker goal_node_marker_; //terminal nodes
@@ -1378,10 +1380,13 @@ bool BiRRTstarPlanner::init_planner(vector<double> ee_start_pose, vector<int> co
 
 
 //Run RRT* Planner given a target pose for the endeffector (last link along planning chain) w.r.t the /map frame
-bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, const vector<int> constraint_vec_goal_pose, const vector<pair<double,double> > target_coordinate_dev, const string planner_type)
+bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, const vector<int> constraint_vec_goal_pose, const vector<pair<double,double> > target_coordinate_dev, const string planner_type, bool &planning_needed)
 {
     //Set init_ok flag to default value
     bool init_ok = false;
+
+    //Set planning needed to default value
+    planning_needed = true;
 
     //------------ START CONFIG (from LOCALIZATION Node) --------------
     vector<double> start_conf(m_num_joints);
@@ -1504,10 +1509,12 @@ bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, c
                 copy(folder_path.begin(), folder_path.end(), m_file_path_joint_trajectory);
                 m_file_path_joint_trajectory[folder_path.size()] = '\0'; // don't forget the terminating 0
                 //cout<<m_file_path_joint_trajectory<<endl;
+		//ROS_INFO_STREAM(m_file_path_joint_trajectory);	
 
                 m_KDLRobotModel->writeTrajectoryToFile(m_result_joint_trajectory,m_file_path_joint_trajectory);
 
-                //Robot already at target pose (success = true)
+                //Robot already at target pose, no need to perform planning
+                planning_needed = false;
                 return true;
             }
 
@@ -1689,7 +1696,7 @@ bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, c
 }
 
 
-bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, const string planner_type)
+bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, const string planner_type, bool &planning_needed)
 {
     //Check whether dimension of goal config vector is equal the number of joints in the planning group
     if(goal.size() != m_num_joints)
@@ -1697,6 +1704,9 @@ bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, c
         ROS_ERROR("Dimension of configuration vector does not match number of joints in planning group!!");
         return false;
     }
+
+    //Set planning needed to default value
+    planning_needed = true;
 
     //------------ START CONFIG (from LOCALIZATION Node) --------------
     vector<double> start_conf(m_num_joints);
@@ -1820,7 +1830,8 @@ bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, c
 
                     m_KDLRobotModel->writeTrajectoryToFile(m_result_joint_trajectory,m_file_path_joint_trajectory);
 
-                    //Robot already at target pose (success = true)
+                    //Robot already at target pose, no need to perform planning
+                    planning_needed = false;
                     return true;
                 }
             }
@@ -2109,6 +2120,9 @@ bool BiRRTstarPlanner::run_planner(int search_space, bool flag_iter_or_time, dou
             if(m_informed_sampling_active == true && m_solution_path_available == true)
             {
                 config_rand = sampleJointConfigfromEllipse_JntArray();
+
+                //Draw the ellipse for the Base Configuration Space
+                drawBaseEllipse();
             }
             else
             {
@@ -8235,6 +8249,108 @@ void BiRRTstarPlanner::add_tree_node_vis(string tree_name, Node new_node, vector
     else
           m_goal_tree_add_nodes_marker.points.push_back(tn);
 
+}
+
+//Draw Ellipse showing the informed subset for the Prismatic C-Space
+void BiRRTstarPlanner::drawBaseEllipse()
+{
+    //Only possible if planning is performed using a mobile base
+    if(m_num_joints_prismatic == 2)
+    {
+
+        // Marker for base ellipse (LINE_STRIP)
+        visualization_msgs::Marker base_ellipse_marker;
+        //Set up properties for solution path marker(LINE_STRIP)
+        base_ellipse_marker.header.frame_id = m_base_link_name;
+        base_ellipse_marker.ns = "base_ellipse";
+        base_ellipse_marker.action = visualization_msgs::Marker::ADD;
+        //Set Marker Type
+        base_ellipse_marker.type = visualization_msgs::Marker::LINE_STRIP;
+        //LINE_STRIP markers use only the x component of scale, for the line/edge width
+        base_ellipse_marker.scale.x = m_solution_path_base_marker_scale;
+        base_ellipse_marker.pose.orientation.w = 1.0;
+        //Set colour for solution path line
+        base_ellipse_marker.color.r = 0.58;
+        base_ellipse_marker.color.g = 0.0;
+        base_ellipse_marker.color.b = 0.827;
+        base_ellipse_marker.color.a = 1.0;
+
+
+
+        //Start and goal config of mobile base
+        vector<double> x_s(2);
+        x_s[0] = m_config_start_pose[0]; //x
+        x_s[1] = m_config_start_pose[1]; //y
+        vector<double> x_g(2);
+        x_g[0] = m_config_goal_pose[0]; //x
+        x_g[1] = m_config_goal_pose[1]; //y
+
+        //Theoretical optimal solution path cost
+        double c_min = m_start_tree.nodes[0].cost_h.prismatic;
+
+        //Center of ellipse in base_link frame
+        vector<double> ellipse_center(2);
+        ellipse_center[0] = x_s[0] + (x_g[0]-x_s[0])/2.0;
+        ellipse_center[1] = x_s[1] + (x_g[1]-x_s[1])/2.0;
+
+        //Dimension of minor and major axis
+        double dim_major_axis = m_cost_best_solution_path_prismatic;
+        double dim_minor_axis = sqrt(dim_major_axis*dim_major_axis-c_min*c_min);
+
+        //Dimension of minor and major axis /Half
+        double a = dim_major_axis/2.0;
+        double b = dim_minor_axis/2.0;
+
+        //Angle between x_s and x_g expressed in base_link frame
+        double angle_rad_xs_xg = tan((x_g[1]-x_s[1])/(x_g[0]-x_s[0]));
+
+        //A point on the ellipse
+        geometry_msgs::Point ep;
+        geometry_msgs::Point first_point;
+        //Angle step width (for approximation of ellipse)
+        double angle_step_width = 0.1; //in rad
+        for(double angle = -M_PI ; angle <= M_PI ; angle+=angle_step_width)
+        {
+            //TODO:
+            // -> 1) Compute point on ellipse in base_link frame
+
+            //Compute x coordinate given an angle  //x = (+/-)(a*b)/(sqrt(b^2+a^2*(tan(angle)^2)))
+            if(-M_PI_2 < angle && angle < M_PI_2)
+            {
+                ep.x = (a*b)/(sqrt(b*b + (a*a) *(tan(angle)*tan(angle)))); //use "+" for angle -1.57 < angle < 1.57
+
+            }else{
+                ep.x = -(a*b)/(sqrt(b*b + (a*a) *(tan(angle)*tan(angle)))); // use "-" for angle 1.57 < angle < -1.57
+            }
+
+            //Compute y coordinate given an angle //y = x*tan(angle)
+            ep.y = ep.x * tan(angle);
+
+            //Ellipse points always drawn on the ground
+            ep.z = 0.0;
+
+            //TODO:
+            // -> 2) Translate and rotate point to the center frame between x_s and x_g
+            //px = x * cs - y * sn;
+            //py = x * sn + y * cs;
+            double x_tmp = ellipse_center[0] + (ep.x * cos(angle_rad_xs_xg) - ep.y * sin(angle_rad_xs_xg));
+            ep.y = ellipse_center[1] + (ep.x * sin(angle_rad_xs_xg) + ep.y * cos(angle_rad_xs_xg));
+            ep.x = x_tmp;
+
+
+            //Save first point which will be added as last point in the end to close the ellipse
+            if(angle == -M_PI)
+                first_point = ep;
+
+            // -> 3) Add the point to base_ellipse_marker
+            base_ellipse_marker.points.push_back(ep);
+        }
+        //Add first point to close ellipse
+        base_ellipse_marker.points.push_back(first_point);
+
+        //Publish ellipse
+        m_base_ellipse_pub.publish(base_ellipse_marker);
+    }
 }
 
 

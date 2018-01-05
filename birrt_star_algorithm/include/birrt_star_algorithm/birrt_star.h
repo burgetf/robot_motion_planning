@@ -62,8 +62,8 @@ class BiRRTstarPlanner //: public robot_interface_definition::RobotInterface
     bool init_planner(vector<double> ee_start_pose, vector<int> constraint_vec_start_pose, vector<double> ee_goal_pose, vector<int> constraint_vec_goal_pose, vector<pair<double,double> > coordinate_dev, int search_space);
 
     //Initialize RRT* Planner for plannig with the real robot
-    bool init_planner_map_goal_pose(const Eigen::Affine3d& goal, const vector<int> constraint_vec_goal_pose, const vector<pair<double,double> > target_coordinate_dev, const string planner_type);
-    bool init_planner_map_goal_config(const vector<double> goal, const string planner_type);
+    bool init_planner_map_goal_pose(const Eigen::Affine3d& goal, const vector<int> constraint_vec_goal_pose, const vector<pair<double,double> > target_coordinate_dev, const string planner_type, bool &planning_needed);
+    bool init_planner_map_goal_config(const vector<double> goal, const string planner_type, bool &planning_needed);
 
 
     //Read / Write Start and Goal Config
@@ -501,15 +501,18 @@ class BiRRTstarPlanner //: public robot_interface_definition::RobotInterface
     //Solution path publisher (for base trajectory)
     ros::Publisher m_base_solution_path_pub;
 
+    //Publisher for prismatic C-Space ellipse (informed subset for base)
+    ros::Publisher m_base_ellipse_pub;
 
-    //Functions
+
+    //Functions for nodes and edges
     void add_tree_edge_vis(string tree_name,Edge new_edge);
     void remove_tree_edge_vis(string tree_name,Edge old_edge);
     void add_tree_node_vis(string tree_name,Node new_node);
     void add_tree_node_vis(string tree_name, Node new_node, vector<double> color_rgb);
 
-
-
+    //Functions for informed sampling ellipses
+    void drawBaseEllipse();
 
     // ++ Store results of RRT* planner ()++
 
