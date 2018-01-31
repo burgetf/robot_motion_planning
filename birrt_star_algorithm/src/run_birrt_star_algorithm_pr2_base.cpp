@@ -227,18 +227,18 @@ int main(int argc, char** argv)
 
     //Permitted displacement for ee coordinates w.r.t desired target frame
     vector<pair<double,double> > target_coordinate_dev(6);
-    target_coordinate_dev[0].first = -0.005;    //negative X deviation [m]
-    target_coordinate_dev[0].second = 0.005;    //positive X deviation
-    target_coordinate_dev[1].first = -0.005;    //negative Y deviation
-    target_coordinate_dev[1].second = 0.005;    //positive Y deviation
+    target_coordinate_dev[0].first = -0.01;    //negative X deviation [m]
+    target_coordinate_dev[0].second = 0.01;    //positive X deviation
+    target_coordinate_dev[1].first = -0.01;    //negative Y deviation
+    target_coordinate_dev[1].second = 0.01;    //positive Y deviation
     target_coordinate_dev[2].first = -0.005;    //negative Z deviation
     target_coordinate_dev[2].second = 0.005;    //positive Z deviation
     target_coordinate_dev[3].first = -0.05;     //negative Xrot deviation [rad]
     target_coordinate_dev[3].second = 0.05;     //positive Xrot deviation
     target_coordinate_dev[4].first = -0.05;     //negative Yrot deviation
     target_coordinate_dev[4].second = 0.05;     //positive Yrot deviation
-    target_coordinate_dev[5].first = -0.05;     //negative Zrot deviation
-    target_coordinate_dev[5].second = 0.05;     //positive Zrot deviation
+    target_coordinate_dev[5].first = -0.1;     //negative Zrot deviation
+    target_coordinate_dev[5].second = 0.1;     //positive Zrot deviation
 
     cout<<"Here"<<endl;
 

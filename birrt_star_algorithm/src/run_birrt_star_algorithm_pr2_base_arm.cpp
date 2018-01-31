@@ -100,15 +100,15 @@ int main(int argc, char** argv)
 
     //Start Position of cart
     vector<double> obj_pos_start(3);
-    obj_pos_start[0] = 8.0;   //x pos
-    obj_pos_start[1] = -3.5;  //y pos
+    obj_pos_start[0] = 5.0;   //x pos
+    obj_pos_start[1] = -4.5;  //y pos
     obj_pos_start[2] = 0.0;   //z pos
     //moveit_msgs::AttachedCollisionObject cart = world_builder.insertManipulableCart("cart", obj_pos_start, obs_dim);
 
     //Goal Position of cart
     vector<double> obj_pos_goal(3);
-    obj_pos_goal[0] = -8.0;   //x pos
-    obj_pos_goal[1] = -3.0;  //y pos
+    obj_pos_goal[0] = -5.0;   //x pos
+    obj_pos_goal[1] = -4.0;  //y pos
     obj_pos_goal[2] = 0.0;   //z pos
     //moveit_msgs::AttachedCollisionObject cart_goal = world_builder.insertManipulableCart("cart_goal", obj_pos_goal, obs_dim);
 
@@ -257,9 +257,9 @@ int main(int argc, char** argv)
     constraint_vec_goal_pose[0] = 1; //X
     constraint_vec_goal_pose[1] = 1; //Y
     constraint_vec_goal_pose[2] = 1; //Z
-    constraint_vec_goal_pose[3] = 1; //RotX
-    constraint_vec_goal_pose[4] = 1; //RotY
-    constraint_vec_goal_pose[5] = 1; //RotZ
+    constraint_vec_goal_pose[3] = 0; //RotX
+    constraint_vec_goal_pose[4] = 0; //RotY
+    constraint_vec_goal_pose[5] = 0; //RotZ
 
     //Permitted displacement for ee coordinates w.r.t desired target frame
     vector<pair<double,double> > target_coordinate_dev(6);

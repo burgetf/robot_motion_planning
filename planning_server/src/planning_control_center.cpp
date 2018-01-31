@@ -682,20 +682,44 @@ bool PlanningControlCenter::run_planner_map_goal_pose(planner_msgs::run_planner_
 
     //Initialization flag
     bool initialization_ok = true;
+    bool planning_needed = true;
+    string planner_type = "none"; 
 
     if(req.planner_type == "bi" && m_bi_planner)
     {
         //Reset planner data
         m_bi_planner->reset_planner_only();
+
+        //Get planner type depending on planner settings
+        if(req.informed_sampling == false && req.tree_optimization == false)
+		planner_type = "bi_rrt_connect";
+    	else if (req.informed_sampling == true && req.tree_optimization == false)
+		planner_type = "bi_informed_rrt";
+    	else if (req.informed_sampling == false && req.tree_optimization == true)
+		planner_type = "bi_rrt_star";
+    	else
+		planner_type = "bi_informed_rrt_star";
+
         //Init planner for real robot
-        initialization_ok = m_bi_planner->init_planner_map_goal_pose(goal_pose,constraint_vec_goal_pose, target_coordinate_dev_local, req.planner_type);
+        initialization_ok = m_bi_planner->init_planner_map_goal_pose(goal_pose,constraint_vec_goal_pose, target_coordinate_dev_local, planner_type, planning_needed);
     }
     else if(req.planner_type == "uni" && m_uni_planner)
     {
         //Reset planner data
         m_uni_planner->reset_planner_only();
+
+        //Get planner type depending on planner settings
+    	if(req.informed_sampling == false && req.tree_optimization == false)
+        	planner_type = "uni_rrt";
+    	else if (req.informed_sampling == true && req.tree_optimization == false)
+        	planner_type = "uni_informed_rrt";
+    	else if (req.informed_sampling == false && req.tree_optimization == true)
+        	planner_type = "uni_rrt_star";
+    	else
+        	planner_type = "uni_informed_rrt_star";
+
         //Init planner for real robot
-        initialization_ok = m_uni_planner->init_planner_map_goal_pose(goal_pose,constraint_vec_goal_pose, target_coordinate_dev_local, req.planner_type);
+        initialization_ok = m_uni_planner->init_planner_map_goal_pose(goal_pose,constraint_vec_goal_pose, target_coordinate_dev_local, planner_type, planning_needed);
     }
     else
     {
@@ -707,8 +731,20 @@ bool PlanningControlCenter::run_planner_map_goal_pose(planner_msgs::run_planner_
 
     if(initialization_ok)
     {
-        //Execute Planner run
-        res.success = solve_planning_problem(req.planner_type, req.flag_iter_or_time, req.iter_or_time, req.tree_optimization, req.informed_sampling,req.run_id, req.show_tree);
+	ROS_ERROR("Planner initialization succeeded");
+        //If the robot is not already at the target pose
+        if(planning_needed)
+        {
+            //Execute Planner run
+            res.success = solve_planning_problem(req.planner_type, req.flag_iter_or_time, req.iter_or_time, req.tree_optimization, req.informed_sampling,req.run_id, req.show_tree);
+        }
+        else
+        {
+            ROS_INFO_STREAM("Planning not needed, robot is already at target pose");
+            //Return success
+            res.success = true;
+            return true;
+        }
     }
     else
     {
@@ -764,20 +800,44 @@ bool PlanningControlCenter::run_planner_map_goal_config(planner_msgs::run_planne
 
     //Initialization flag
     bool initialization_ok = true;
+    bool planning_needed = true;
+    string planner_type = "none";
 
     if(req.planner_type == "bi" && m_bi_planner)
     {
         //Reset planner data
         m_bi_planner->reset_planner_only();
+
+        //Get planner type depending on planner settings
+        if(req.informed_sampling == false && req.tree_optimization == false)
+		planner_type = "bi_rrt_connect";
+    	else if (req.informed_sampling == true && req.tree_optimization == false)
+		planner_type = "bi_informed_rrt";
+    	else if (req.informed_sampling == false && req.tree_optimization == true)
+		planner_type = "bi_rrt_star";
+    	else
+		planner_type = "bi_informed_rrt_star";
+
         //Init planner for real robot
-        initialization_ok = m_bi_planner->init_planner_map_goal_config(req.goal_config, req.planner_type);
+        initialization_ok = m_bi_planner->init_planner_map_goal_config(req.goal_config, planner_type, planning_needed);
     }
     else if(req.planner_type == "uni" && m_uni_planner)
     {
         //Reset planner data
         m_uni_planner->reset_planner_only();
+
+        //Get planner type depending on planner settings
+    	if(req.informed_sampling == false && req.tree_optimization == false)
+        	planner_type = "uni_rrt";
+    	else if (req.informed_sampling == true && req.tree_optimization == false)
+        	planner_type = "uni_informed_rrt";
+    	else if (req.informed_sampling == false && req.tree_optimization == true)
+        	planner_type = "uni_rrt_star";
+    	else
+        	planner_type = "uni_informed_rrt_star";
+
         //Init planner for real robot
-        initialization_ok = m_uni_planner->init_planner_map_goal_config(req.goal_config, req.planner_type);
+        initialization_ok = m_uni_planner->init_planner_map_goal_config(req.goal_config, planner_type, planning_needed);
     }
     else
     {
@@ -789,8 +849,18 @@ bool PlanningControlCenter::run_planner_map_goal_config(planner_msgs::run_planne
 
     if(initialization_ok)
     {
-        //Execute Planner run
-        res.success = solve_planning_problem(req.planner_type, req.flag_iter_or_time, req.iter_or_time, req.tree_optimization, req.informed_sampling,req.run_id, req.show_tree);
+        if(planning_needed)
+        {
+            //Execute Planner run
+            res.success = solve_planning_problem(req.planner_type, req.flag_iter_or_time, req.iter_or_time, req.tree_optimization, req.informed_sampling,req.run_id, req.show_tree);
+        }
+        else
+        {
+            ROS_INFO_STREAM("Planning not needed, robot is already at target pose");
+            //Return success
+            res.success = true;
+            return true;
+        }
     }
     else
     {

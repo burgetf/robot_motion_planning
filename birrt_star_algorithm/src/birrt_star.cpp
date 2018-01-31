@@ -1175,6 +1175,8 @@ bool BiRRTstarPlanner::init_planner(vector<double> ee_start_pose, vector<int> co
             ROS_INFO_STREAM("Failed to update map to robot transform in feasibility checker");
     }
 
+    cout<<"Here"<<endl;
+
     //Check start and goal config for validity
     bool start_conf_valid = m_FeasibilityChecker->isConfigValid(ik_sol_ee_start_pose);
     bool goal_conf_valid = m_FeasibilityChecker->isConfigValid(ik_sol_ee_goal_pose);
@@ -1187,6 +1189,9 @@ bool BiRRTstarPlanner::init_planner(vector<double> ee_start_pose, vector<int> co
     }else{
         //Nothing to do
     }
+
+
+
 
     //Compute Heuristic for root node (either distance between start and goal config or between start and goal endeffector pose)
     //m_cost_theoretical_solution_path[0] -> total
@@ -1345,6 +1350,7 @@ bool BiRRTstarPlanner::init_planner(vector<double> ee_start_pose, vector<int> co
     else
         ROS_ERROR("Requested planner search space does not exist!!!");
 
+     cout<<"There"<<endl;
 
     //Iteration and time when first and last solution is found
     m_first_solution_iter = 10000;
@@ -1398,7 +1404,7 @@ bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, c
     //Determine whether one of the revolute joints belong to the base (i.e. theta joint)
     // -> If yes, set the index where the manipulator joints start in the start_conf vector
     int offset_manipulator_joint_indices = 0;
-    if((m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) || m_num_joints_revolute > 7)
+    if((m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) || m_num_joints_revolute > 7)
         offset_manipulator_joint_indices = 1;
 
     //There are revolute joints that belong to the manipulator
@@ -1422,7 +1428,7 @@ bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, c
 
     //Planning is performed for mobile base
     // Note: For base planning the goal pose is equal to the goal configuration, i.e. (x,y,theta) -> therefore no control-based config generation is run
-    if(m_num_joints_prismatic == 2 && m_num_joints_revolute == 1)
+    if(m_num_joints_prismatic >= 2 && m_num_joints_revolute == 1)
     {
             //Get goal config of base from input (in /map frame)
             double goal_x_map, goal_y_map, goal_theta_map;
@@ -1472,11 +1478,15 @@ bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, c
             double z_dir = transform_base_to_goal.getRotation().getAxis().z();
             goal_conf_base[2] = z_dir > 0.0 ? goal_rot_base.getAngle() : -goal_rot_base.getAngle();
 
-            cout <<"Goal pose in base frame" << endl;
+            //cout <<"Goal pose in base frame" << endl;
             //cout << goal_pose_base.matrix() << endl << endl;
-            cout <<goal_conf_base[0] << endl;
-            cout <<goal_conf_base[1] << endl;
-            cout <<goal_conf_base[2] << endl<<endl;
+            //cout <<goal_conf_base[0] << endl;
+            //cout <<goal_conf_base[1] << endl;
+            //cout <<goal_conf_base[2] << endl<<endl;
+
+	    ROS_INFO_STREAM("Goal pose in base frame");
+            //cout << goal_pose_base.matrix() << endl << endl;
+            ROS_INFO_STREAM(goal_conf_base[0]<<"  "<<goal_conf_base[1]<<"  "<<goal_conf_base[2]);
 
             //cout <<goal_rot_base.getAngle() << endl;
             //cout <<goal_rot_base.getAxis().z() << endl;
@@ -1610,7 +1620,7 @@ bool BiRRTstarPlanner::init_planner_map_goal_pose(const Eigen::Affine3d& goal, c
 
     //Planning is performed for mobile manipulator
     // -> Note: In this case the goal pose corresponds to the goal config -> thus no need to run controller to generate goal config
-    if(m_num_joints_prismatic == 2 && m_num_joints_revolute > 1)
+    if(m_num_joints_prismatic >= 2 && m_num_joints_revolute > 1)
     {
         //------------ GOAL ENDEFFECTOR POSE (from function input) --------------
 
@@ -1718,7 +1728,7 @@ bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, c
     //Determine whether one of the revolute joints belong to the base (i.e. theta joint)
     // -> If yes, set the index where the manipulator joints start in the start_conf vector
     int offset_manipulator_joint_indices = 0;
-    if((m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) || m_num_joints_revolute > 7)
+    if((m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) || m_num_joints_revolute > 7)
         offset_manipulator_joint_indices = 1;
 
     //There are revolute joints that belong to the manipulator
@@ -1745,7 +1755,7 @@ bool BiRRTstarPlanner::init_planner_map_goal_config(const vector<double> goal, c
     vector<double> goal_conf(m_num_joints);
 
     //Planning includes mobile base -> thus base goal pose needs to be transformed from map frame into base_link frame
-    if(m_num_joints_prismatic == 2 && m_num_joints_revolute != 0)
+    if(m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0)
     {
 
             //Get goal config of base from input (in /map frame)
@@ -2163,7 +2173,9 @@ bool BiRRTstarPlanner::run_planner(int search_space, bool flag_iter_or_time, dou
             //Get time elapsed
             //gettimeofday(&m_timer, NULL);
             //double time_expand_tree_end = m_timer.tv_sec+(m_timer.tv_usec/1000000.0);
-            //cout<<"Time Expand Tree: "<<(time_expand_tree_end - time_expand_tree_start)<<endl;
+            //double time_diff = time_expand_tree_end - time_expand_tree_start;
+            //if(time_diff > 5.0)
+            //    cout<<"Time Expand Tree: "<<time_diff<<endl;
 
 
             //Set cost to reach new node to large value in order to allow near vertices to connect to the new node
@@ -3727,6 +3739,7 @@ bool BiRRTstarPlanner::expandTree(Rrt_star_tree *tree, Node nn_node, Node x_rand
 
         if(m_single_extend_step == true)
         {
+
             //Copy x_rand, because extend_node will be modified in the following
             Node extend_node;
             extend_node.config = x_rand.config;
@@ -3737,8 +3750,21 @@ bool BiRRTstarPlanner::expandTree(Rrt_star_tree *tree, Node nn_node, Node x_rand
             //Connect Nodes (by interpolating configurations of nn_node and current x_rand)
             connectNodesInterpolation(tree, nn_node, extend_node, m_num_traj_segments_interp, x_new, e_new);
 
+            //Variable for timer
+            //gettimeofday(&m_timer, NULL);
+            //double coll_start = m_timer.tv_sec+(m_timer.tv_usec/1000000.0);
+
+            //cout<<"Edge has: "<<e_new.joint_trajectory.size()<<" configs"<<endl;
+
             //Set flag to true if edge between nn_node and extend_node is collision-free
             tree_extend_NN = m_FeasibilityChecker->isEdgeValid(e_new);
+
+            //Variable for timer
+            //gettimeofday(&m_timer, NULL);
+            //double coll_end = m_timer.tv_sec+(m_timer.tv_usec/1000000.0);
+            //double time_diff = coll_end - coll_start;
+            //if(time_diff > 3.0)
+            //    cout<<"Coll Check: "<<time_diff<<endl;
 
             if(tree_extend_NN)
             {
@@ -5072,7 +5098,7 @@ void BiRRTstarPlanner::jointConfigEllipseInitialization()
 
     Eigen::VectorXd  a1_prism;
     Eigen::VectorXd  id_m1_prism;
-    if(m_num_joints_prismatic == 2)
+    if(m_num_joints_prismatic >= 2)
     {
         a1_prism.resize(m_num_joints_prismatic);
         id_m1_prism.resize(m_num_joints_prismatic);
@@ -5181,7 +5207,7 @@ void BiRRTstarPlanner::jointConfigEllipseInitialization()
     Eigen::MatrixXd matrix_M_prism;
     //Diagonal matrix required to compute matrix "C"
     Eigen::MatrixXd diag_matrix_prism;
-    if(m_num_joints_prismatic == 2)
+    if(m_num_joints_prismatic >= 2)
     {
         matrix_M_prism.resize(m_num_joints_prismatic, m_num_joints_prismatic);
         matrix_M_prism = a1_prism*id_m1_prism.transpose();
@@ -5262,7 +5288,7 @@ KDL::JntArray BiRRTstarPlanner::sampleJointConfigfromEllipse_JntArray()
 
         //Transform config sample from map frame into base_link frame (used when planning is performed with a real robot running a localization)
         //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute > 0) //-> m_num_joints_prismatic == 2, m_num_joints_revolute > 1 means robot base is involved in planning
+        if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute > 0) //-> m_num_joints_prismatic >= 2, m_num_joints_revolute > 1 means robot base is involved in planning
         {
             transform_sample_to_base_link_frame(ball_conf_array);
         }
@@ -5424,7 +5450,7 @@ KDL::JntArray BiRRTstarPlanner::sampleJointConfigfromEllipse_JntArray()
         //    above_platform = false;
 
         //The robot has a base moving in x,y direction (i.e. has 2 prismatic joints)
-        if(m_num_joints_prismatic == 2 && m_num_joints_revolute > 0)
+        if(m_num_joints_prismatic >= 2 && m_num_joints_revolute > 0)
         {
 
             //Transform config sample from map frame into base_link frame (used when planning is performed with a real robot running a localization)
@@ -5452,7 +5478,7 @@ KDL::JntArray BiRRTstarPlanner::sampleJointConfigfromEllipse_JntArray()
 //            //Transform config sample from map frame into base_link frame (used when planning is performed with a real robot running a localization)
 //            KDL::JntArray copy_rand_conf_array = rand_conf_array;
 //            //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-//            if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2 means robot base is involved in planning
+//            if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2 means robot base is involved in planning
 //            {
 //                transform_sample_to_map_frame(copy_rand_conf_array);
 //            }
@@ -5512,7 +5538,7 @@ KDL::JntArray BiRRTstarPlanner::sampleJointConfig_JntArray()
 
         //Transform config sample from map frame into base_link frame (used when planning is performed with a real robot running a localization)
         //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2 means robot base is involved in planning
+        if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2 means robot base is involved in planning
         {
             transform_sample_to_base_link_frame(rand_conf);
         }
@@ -5557,7 +5583,7 @@ KDL::JntArray BiRRTstarPlanner::sampleJointConfig_JntArray(vector<double> mean_c
 
         //Transform config sample from map frame into base_link frame (used when planning is performed with a real robot running a localization)
         //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2 means robot base is involved in planning
+        if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2 means robot base is involved in planning
         {
             transform_sample_to_base_link_frame(rand_conf);
         }
@@ -5611,7 +5637,7 @@ vector<double> BiRRTstarPlanner::sampleJointConfig_Vector()
 
         //Transform config sample from map frame into base_link frame (used when planning is performed with a real robot running a localization)
         //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2 means robot base is involved in planning
+        if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2 means robot base is involved in planning
         {
             transform_sample_to_base_link_frame(rand_sample);
         }
@@ -5668,7 +5694,7 @@ vector<double> BiRRTstarPlanner::sampleJointConfig_Vector(vector<double> mean_co
 
         //Transform config sample from map frame into base_link frame (used when planning is performed with a real robot running a localization)
         //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2 means robot base is involved in planning
+        if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2 means robot base is involved in planning
         {
             transform_sample_to_base_link_frame(rand_sample);
         }
@@ -8255,7 +8281,7 @@ void BiRRTstarPlanner::add_tree_node_vis(string tree_name, Node new_node, vector
 void BiRRTstarPlanner::drawBaseEllipse()
 {
     //Only possible if planning is performed using a mobile base
-    if(m_num_joints_prismatic == 2)
+    if(m_num_joints_prismatic >= 2)
     {
 
         // Marker for base ellipse (LINE_STRIP)
@@ -8308,7 +8334,7 @@ void BiRRTstarPlanner::drawBaseEllipse()
         geometry_msgs::Point ep;
         geometry_msgs::Point first_point;
         //Angle step width (for approximation of ellipse)
-        double angle_step_width = 0.1; //in rad
+        double angle_step_width = 0.01; //in rad
         for(double angle = -M_PI ; angle <= M_PI ; angle+=angle_step_width)
         {
             //TODO:
@@ -8953,6 +8979,8 @@ void BiRRTstarPlanner::attachObject(moveit_msgs::AttachedCollisionObject attache
     //Attach the given object "attached_object" to the end-effector in the start pose m_start_tree.nodes[0].ee_pose
     m_planning_world->attachObjecttoEndeffector(attached_object,m_ee_start_pose);
 
+    ROS_INFO("Object attached to end-effector");
+
 }
 
 //DeAttach Object to the End-effector
@@ -9047,7 +9075,7 @@ void BiRRTstarPlanner::transform_sample_to_map_frame(KDL::JntArray& sample_conf)
 {
     //Transform base sample_conf to /map frame only when localization is active (acml package)
     //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-    if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2 means robot base is involved in planning
+    if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2 means robot base is involved in planning
     {
         //cout<<"Name of Planning frame: "<<m_planning_frame<<endl;
 
@@ -9086,7 +9114,7 @@ void BiRRTstarPlanner::transform_sample_to_map_frame(vector<double>& sample_conf
 {
     //Transform base config to /map frame only when localization is active (acml package)
     //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-    if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2 means robot base is involved in planning
+    if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2 means robot base is involved in planning
     {
         //cout<<"Name of Planning frame: "<<m_planning_frame<<endl;
 
@@ -9126,7 +9154,7 @@ void BiRRTstarPlanner::transform_sample_to_base_link_frame(KDL::JntArray& sample
 {
     //Transform base config to /map frame only when localization is active (acml package)
     //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-    if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2 means robot base is involved in planning
+    if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2 means robot base is involved in planning
     {
         //cout<<"Name of Planning frame: "<<m_planning_frame<<endl;
 
@@ -9172,7 +9200,7 @@ void BiRRTstarPlanner::transform_sample_to_base_link_frame(vector<double>& sampl
 {
     //Transform base config to /map frame only when localization is active (acml package)
     //if(m_planning_frame == "/map" && (m_planning_group == "omnirob_base" || m_planning_group == "omnirob_lbr_sdh"))
-    if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic == 2  and && m_num_joints_revolute > 1 means robot base is involved in planning
+    if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute != 0) //-> m_num_joints_prismatic >= 2  and && m_num_joints_revolute > 1 means robot base is involved in planning
     {
         //cout<<"Name of Planning frame: "<<m_planning_frame<<endl;
 

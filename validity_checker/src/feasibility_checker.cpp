@@ -224,7 +224,7 @@ bool FeasibilityChecker::isConfigValid(vector<double> config, bool print_contact
     //++++++++++ START: TESTING ++++++++++
 
     //Transform base config to /map frame only when localization is active (acml package)
-    if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
+    if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute >= 1)
     {
     	//cout<<"Name of Planning frame: "<<m_planning_frame<<endl;
 
@@ -312,7 +312,7 @@ bool FeasibilityChecker::isConfigValid(vector<double> config, bool print_contact
 
         for(collision_detection::CollisionResult::ContactMap::const_iterator it = collision_result.contacts.begin(); it != collision_result.contacts.end();  ++it)
         {
-	  ROS_INFO_STREAM("Contact between: " <<it->first.first.c_str()<<" and" <<it->first.second.c_str());
+            ROS_INFO_STREAM("Contact between: " <<it->first.first.c_str()<<" and" <<it->first.second.c_str());
         }
 
     }
@@ -365,7 +365,7 @@ bool FeasibilityChecker::isConfigValid(KDL::JntArray config, bool print_contacts
     //++++++++++ START: TESTING ++++++++++
 
     //Transform base config to /map frame only when localization is active (acml package)
-    if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
+    if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute >= 1)
     {
         //cout<<"Name of Planning frame: "<<m_planning_frame<<endl;
 
@@ -409,7 +409,15 @@ bool FeasibilityChecker::isConfigValid(KDL::JntArray config, bool print_contacts
             //cout<<config(0)<<endl;
             //cout<<config(1)<<endl;
             //cout<<config(2)<<endl;
+
+	    ROS_INFO_STREAM("Config in map frame");
+            //cout << goal_pose_base.matrix() << endl << endl;
+            ROS_INFO_STREAM(config(0)<<"  "<<config(1)<<"  "<<config(2));
         }
+	else
+	{
+		ROS_ERROR("No map to base_link transform available");
+	}
     }
 
 
@@ -695,10 +703,11 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, bool print_contacts)
     for (int edp = 0 ; edp < tree_edge.joint_trajectory.size() ; edp++)
     {
 
-        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
+        if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute >= 1)
         {
             if(m_transform_map_to_base_available)
             {
+                cout<<"Transform map to base available!"<<endl;
 
                 //Transform base_link to sample
                 tf::StampedTransform transform_base_to_sample;
@@ -831,7 +840,7 @@ bool FeasibilityChecker::isEdgeValid(Edge tree_edge, int &last_valid_node_idx, b
     {
         //cout<<edp<<endl;
 
-        if(m_planning_frame == "/map" && m_num_joints_prismatic == 2 && m_num_joints_revolute >= 1)
+        if(m_planning_frame == "/map" && m_num_joints_prismatic >= 2 && m_num_joints_revolute >= 1)
         {
             if(m_transform_map_to_base_available)
             {
